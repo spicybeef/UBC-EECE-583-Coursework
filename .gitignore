@@ -30,6 +30,11 @@ wheels/
 *.manifest
 *.spec
 
+# Visual Studio Ignores
+Release/
+Debug/
+.vs/
+
 # Installer logs
 pip-log.txt
 pip-delete-this-directory.txt
