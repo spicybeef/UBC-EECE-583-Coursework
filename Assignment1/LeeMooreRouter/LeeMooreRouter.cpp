@@ -1,16 +1,43 @@
 #define _CRT_SECURE_NO_WARNINGS //  Disable unsafe warnings, to enable use of sprintf within VS2017
-#include <stdio.h>
+
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <string>
+#include <vector>
+
 #include "graphics.h"
 #include "LeeMooreRouter.h"
 
-int main()
+int main(int argc, char **argv)
 {
 	int i;
+	std::string line;
+	char * filename = argv[1];
+	gridStruct_t grid;
+
+	// Filename to read in is the second argument
+	std::ifstream myfile(filename, std::ios::in);
+
+	// Check if file was opened properly
+	if(myfile.is_open())
+	{
+		printf("File %s opened! Here's what's in it:\n", filename);
+	}
+	else
+	{
+		printf("FATAL ERROR, file %s couldn't be opened!\n", filename);
+		return -1;
+	}
+
+	// Parse grid struct
+	ParseGridStruct(&myfile, &grid);
+
+	return 0;
 
 	/* initialize display with WHITE background */
-
 	printf("About to start graphics.\n");
-	init_graphics("Some Example Graphics", WHITE);
+	init_graphics("Some Example Graphics", BLACK);
 
 	/* still picture drawing allows user to zoom, etc. */
 	// Set-up coordinates from (xl,ytop) = (0,0) to 
@@ -62,6 +89,50 @@ int main()
 	return (0);
 }
 
+bool ParseGridStruct(std::ifstream *inputFile, gridStruct_t *outputStruct)
+{
+	int i;
+	std::string line;
+	std::vector<std::string> stringVec;
+
+	// 1. Get grid size
+	std::getline(*inputFile, line);
+	stringVec = SplitString(line, ' ');
+	outputStruct->gridSizeX = stoi(stringVec[0]);
+	outputStruct->gridSizeY = stoi(stringVec[1]);
+	printf("Grid size is %d x %d\n", outputStruct->gridSizeX, outputStruct->gridSizeY);
+	
+	// 2. Determine the amount of obstructed cells
+	std::getline(*inputFile, line);
+	outputStruct->numObstructedCells = stoi(line);
+	printf("%d obstructed cells in total:\n", outputStruct->numObstructedCells);
+
+	// 3. Get obstructed cell locations
+	for(i = 0; i < outputStruct->numObstructedCells; i++)
+	{
+		std::getline(*inputFile, line);
+		stringVec = SplitString(line, ' ');
+		outputStruct->obstructedX[i] = stoi(stringVec[0]);
+		outputStruct->obstructedY[i] = stoi(stringVec[1]);
+		printf("%d: %d, %d\t\n", i, outputStruct->obstructedX[i], outputStruct->obstructedY[i]);
+	}
+
+	return true;
+}
+
+std::vector<std::string> SplitString(std::string inString, char delimiter)
+{
+	std::vector<std::string> internal;
+	std::stringstream ss(inString); // Turn the string into a stream.
+	std::string temp;
+
+	while(std::getline(ss, temp, delimiter))
+	{
+		internal.push_back(temp);
+	}
+
+	return internal;
+}
 
 void DrawScreen(void)
 {
