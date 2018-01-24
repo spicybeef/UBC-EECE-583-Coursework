@@ -4,11 +4,11 @@
 #include "easygl_constants.h"
 
 #ifdef WIN32
-	#include "windows.h"
+    #include "windows.h"
 #else
-	#ifndef X11
-	#define X11
-	#endif
+    #ifndef X11
+    #define X11
+    #endif
 #endif
 
 #ifdef X11
@@ -39,14 +39,14 @@
  */
 typedef struct {
 #ifdef X11
-	Window mainwnd; 
+    Window mainwnd; 
 #else
-	HWND mainwnd;
+    HWND mainwnd;
 #endif
-	float xmult, ymult;
-	float ps_xmult, ps_ymult;
-	float xleft, xright, ytop, ybot;
-	int top_width, top_height;
+    float xmult, ymult;
+    float ps_xmult, ps_ymult;
+    float xleft, xright, ytop, ybot;
+    int top_width, top_height;
 } t_report;
 
 /************** ESSENTIAL FUNCTIONS ******************/
@@ -67,9 +67,9 @@ typedef struct {
 * functions (default for both: off).
 */
 void event_loop (void (*act_on_mousebutton) (float x, float y),
-			void (*act_on_mousemove) (float x, float y),
-			void (*act_on_keypress) (char key_pressed),
-			void (*drawscreen) (void));  
+            void (*act_on_mousemove) (float x, float y),
+            void (*act_on_keypress) (char key_pressed),
+            void (*drawscreen) (void));  
 
 /* Opens up the graphics; the window will have window_name in its
  * title bar and the specified background colour.
@@ -100,7 +100,7 @@ void update_message (const char *msg);
  * as passed into the event loop. 
  */
 void create_button (const char *prev_button_text , const char *button_text, 
-			void (*button_func) (void (*drawscreen) (void))); 
+            void (*button_func) (void (*drawscreen) (void))); 
 
 /* Destroys the button with the given text; i.e. removes it from
  * the display.
@@ -169,9 +169,9 @@ void fillpoly (t_point *points, int npoints);
  * angextent means clockwise.
  */
 void drawarc (float xcen, float ycen, float rad, float startang,
-			  float angextent); 
+              float angextent); 
 void fillarc (float xcen, float ycen, float rad, float startang,
-			  float angextent);
+              float angextent);
 void drawellipticarc (float xc, float yc, float radx, float rady, float startang, float angextent);
 void fillellipticarc (float xc, float yc, float radx, float rady, float startang, float angextent);
 
