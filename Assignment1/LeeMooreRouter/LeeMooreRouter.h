@@ -1,6 +1,7 @@
 #pragma once
 
 #include <fstream>
+#include <vector>
 #include "graphics.h"
 
 // Constants used in router
@@ -20,25 +21,22 @@
 #define GRID_COLOR				DARKGREY
 #define OBSTRUCTION_COLOR		BLUE
 
-typedef struct
-{
-    int posX;
-    int posY;
-
-} netNodeStruct_t;
+#define MAX_NET_COLORS          8
 
 typedef struct
 {
-    int gridSizeX;
-    int gridSizeY;
+    unsigned int posX;
+    unsigned int posY;
 
-    int numObstructedCells;
-    int obstructedX[MAX_OBSTRUCTED_CELLS];
-    int obstructedY[MAX_OBSTRUCTED_CELLS];
+} posStruct_t;
 
-    int numNets;
-    int nodesPerNet[MAX_NETS];
-    netNodeStruct_t nodes[MAX_NETS][MAX_NODES];
+typedef struct
+{
+    unsigned int gridSizeX;
+    unsigned int gridSizeY;
+
+    std::vector<posStruct_t> obstruction;
+    std::vector<std::vector<posStruct_t>> nodes;
 
 } gridStruct_t;
 
