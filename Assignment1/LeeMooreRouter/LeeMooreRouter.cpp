@@ -11,6 +11,10 @@
 
 gridStruct_t* grid = new gridStruct_t();
 
+// Globals used to center grid in window
+// TODO: find a better way to do this
+int cellSizeX, cellSizeY, gridMarginX, gridMarginY;
+
 color_types netColors[MAX_NET_COLORS] =
 {
     RED, ORANGE, YELLOW, GREEN, DARKGREEN, BLUE, CYAN, MAGENTA
@@ -43,13 +47,21 @@ int main(int argc, char **argv)
     // Initialize Lee Moore algorithm
     LeeMooreInit(grid);
 
+    // Scale cells and padding to current grid
+    cellSizeX = 1280 / (grid->gridSizeX + 4);
+    cellSizeY = cellSizeX;
+    gridMarginX = cellSizeX * 2;
+    gridMarginY = gridMarginX;
+
     /* initialize display with BLACK background */
-    init_graphics("Initializing graphics...", BLACK);
+    init_graphics("Router", BLACK);
 
     /* still picture drawing allows user to zoom, etc. */
     // Set-up coordinates from (xl,ytop) = (0,0) to 
     // (xr,ybot) = (1000,1000)
-    init_world(0., 0., 2000., 2000.);
+    // init_graphics scaled the window based on a factor of the current resolution
+    // TODO: make it dynamic
+    init_world(0., 0., 1280., 864.);
 
     // Draw screen a first time
     DrawScreen();
@@ -59,6 +71,7 @@ int main(int argc, char **argv)
     // Enable key presses
     set_keypress_input(true);
 
+    // Start main event loop
     event_loop(ActOnButtonPress, ActOnMouseMove, ActOnKeyPress, DrawScreen);
 
     close_graphics();
@@ -240,8 +253,8 @@ void DrawCell(cellStruct_t *cell)
     char strBuff[80];
 
     // Make things clean by setting our origin here
-    currentXOrigin = (float)(GRID_PADDING_X + cell->coord.posX * GRID_SIZE_X);
-    currentYOrigin = (float)(GRID_PADDING_Y + cell->coord.posY * GRID_SIZE_Y);
+    currentXOrigin = (float)(gridMarginX + cell->coord.posX * cellSizeX);
+    currentYOrigin = (float)(gridMarginY + cell->coord.posY * cellSizeY);
 
     set_draw_mode(DRAW_NORMAL);
 
@@ -252,41 +265,41 @@ void DrawCell(cellStruct_t *cell)
             setcolor(OBSTRUCTION_COLOR);
             fillrect(
                 currentXOrigin, currentYOrigin,
-                currentXOrigin + GRID_SIZE_X, currentYOrigin + GRID_SIZE_Y
+                currentXOrigin + cellSizeX, currentYOrigin + cellSizeY
             );
             break;
         case CELL_NET_WIRE:
             setcolor(netColors[cell->currentNet & 7]);
             fillrect(
                 currentXOrigin, currentYOrigin,
-                currentXOrigin + GRID_SIZE_X, currentYOrigin + GRID_SIZE_Y
+                currentXOrigin + cellSizeX, currentYOrigin + cellSizeY
             );
             break;
         case CELL_NET_SOURCE:
             setcolor(netColors[cell->currentNet & 7]);
             fillrect(
                 currentXOrigin, currentYOrigin,
-                currentXOrigin + GRID_SIZE_X, currentYOrigin + GRID_SIZE_Y
+                currentXOrigin + cellSizeX, currentYOrigin + cellSizeY
             );
             setcolor(WHITE);
             setfontsize(10);
-            drawtext(currentXOrigin + 0.5f*GRID_SIZE_X, currentYOrigin + 0.5f*GRID_SIZE_Y, "SRC", 800.);
+            drawtext(currentXOrigin + 0.5f*cellSizeX, currentYOrigin + 0.5f*cellSizeY, "SRC", 800.);
             break;
         case CELL_NET_SINK:
             setcolor(netColors[cell->currentNet & 7]);
             fillrect(
                 currentXOrigin, currentYOrigin,
-                currentXOrigin + GRID_SIZE_X, currentYOrigin + GRID_SIZE_Y
+                currentXOrigin + cellSizeX, currentYOrigin + cellSizeY
             );
             setcolor(WHITE);
             setfontsize(10);
-            drawtext(currentXOrigin + 0.5f*GRID_SIZE_X, currentYOrigin + 0.5f*GRID_SIZE_Y, "SNK", 800.);
+            drawtext(currentXOrigin + 0.5f*cellSizeX, currentYOrigin + 0.5f*cellSizeY, "SNK", 800.);
             break;
         case CELL_EMPTY:
             setcolor(GRID_COLOR);
             drawrect(
                 currentXOrigin, currentYOrigin,
-                currentXOrigin + GRID_SIZE_X, currentYOrigin + GRID_SIZE_Y
+                currentXOrigin + cellSizeX, currentYOrigin + cellSizeY
             );
             break;
         default:
@@ -300,7 +313,7 @@ void DrawCell(cellStruct_t *cell)
         sprintf(strBuff, "%d", cell->currentNumber);
         setcolor(WHITE);
         setfontsize(10);
-        drawtext(currentXOrigin + 0.5f*GRID_SIZE_X, currentYOrigin + 0.5f*GRID_SIZE_Y, strBuff, 800.);
+        drawtext(currentXOrigin + 0.5f*cellSizeX, currentYOrigin + 0.5f*cellSizeY, strBuff, 800.);
     }
 }
 
