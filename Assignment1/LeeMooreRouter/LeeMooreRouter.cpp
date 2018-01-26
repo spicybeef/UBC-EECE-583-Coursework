@@ -18,55 +18,56 @@ color_types netColors[MAX_NET_COLORS] =
 
 int main(int argc, char **argv)
 {
-    try
+    std::string line;
+    char * filename = argv[1];
+    //const char * filename = "..\\benchmarks\\stdcell.infile";
+
+    // Filename to read in is the second argument
+    std::ifstream myfile(filename, std::ios::in);
+
+    // Check if file was opened properly
+    if(myfile.is_open())
     {
-        std::string line;
-        //char * filename = argv[1];
-        const char * filename = "..\\benchmarks\\stdcell.infile";
-
-        // Filename to read in is the second argument
-        std::ifstream myfile(filename, std::ios::in);
-
-        // Check if file was opened properly
-        if(myfile.is_open())
-        {
-            printf("File %s opened! Here's what's in it:\n", filename);
-        }
-        else
-        {
-            printf("FATAL ERROR, file %s couldn't be opened!\n", filename);
-            return -1;
-        }
-
-        // Parse grid struct
-        ParseGridStruct(&myfile, grid);
-
-        /* initialize display with BLACK background */
-        printf("About to start graphics.\n");
-        init_graphics("Some Example Graphics", BLACK);
-
-        /* still picture drawing allows user to zoom, etc. */
-        // Set-up coordinates from (xl,ytop) = (0,0) to 
-        // (xr,ybot) = (1000,1000)
-        init_world(0., 0., 2000., 2000.);
-        update_message("Interactive graphics example.");
-
-        DrawScreen();
-
-        event_loop(ActOnButtonPress, ActOnMouseMove, ActOnKeyPress, DrawScreen);
-
-        close_graphics();
-        printf("Graphics closed down.\n");
-
-        return (0);
+        printf("File %s opened! Here's what's in it:\n", filename);
     }
-    catch(const std::exception & ex)
+    else
     {
-        std::cerr << ex.what() << std::endl;
+        printf("FATAL ERROR, file %s couldn't be opened!\n", filename);
+        return -1;
     }
+
+    // Parse input file
+    ParseInputFile(&myfile, grid);
+    // Populate cell information
+    PopulateCellInfo(grid);
+    // Initialize Lee Moore algorithm
+    LeeMooreInit(grid);
+
+    /* initialize display with BLACK background */
+    init_graphics("Initializing graphics...", BLACK);
+
+    /* still picture drawing allows user to zoom, etc. */
+    // Set-up coordinates from (xl,ytop) = (0,0) to 
+    // (xr,ybot) = (1000,1000)
+    init_world(0., 0., 2000., 2000.);
+
+    // Draw screen a first time
+    DrawScreen();
+
+    update_message("Setup complete, ready to start route!");
+
+    // Enable key presses
+    set_keypress_input(true);
+
+    event_loop(ActOnButtonPress, ActOnMouseMove, ActOnKeyPress, DrawScreen);
+
+    close_graphics();
+    printf("Graphics closed down.\n");
+
+    return (0);
 }
 
-bool ParseGridStruct(std::ifstream *inputFile, gridStruct_t *outputStruct)
+bool ParseInputFile(std::ifstream *inputFile, gridStruct_t *outputStruct)
 {
     int i, j, numObstructedCells, numNets, numNodesPerNet;
     posStruct_t tempPos;
@@ -79,7 +80,7 @@ bool ParseGridStruct(std::ifstream *inputFile, gridStruct_t *outputStruct)
     outputStruct->gridSizeX = stoi(stringVec[0]);
     outputStruct->gridSizeY = stoi(stringVec[1]);
     printf("Grid size is %d x %d\n", outputStruct->gridSizeX, outputStruct->gridSizeY);
-    
+
     // 2. Determine the amount of obstructed cells
     std::getline(*inputFile, line);
     numObstructedCells = stoi(line);
@@ -92,8 +93,8 @@ bool ParseGridStruct(std::ifstream *inputFile, gridStruct_t *outputStruct)
         stringVec = SplitString(line, ' ');
         tempPos.posX = stoi(stringVec[0]);
         tempPos.posY = stoi(stringVec[1]);
-        outputStruct->obstruction.push_back(tempPos);
-        printf("\t%d: %d, %d\n", i, outputStruct->obstruction[i].posX, outputStruct->obstruction[i].posY);
+        outputStruct->obstructions.push_back(tempPos);
+        printf("\t%d: %d, %d\n", i, outputStruct->obstructions[i].posX, outputStruct->obstructions[i].posY);
     }
 
     // 4. Get number of nets to route
@@ -117,7 +118,103 @@ bool ParseGridStruct(std::ifstream *inputFile, gridStruct_t *outputStruct)
             tempPos.posY = stoi(stringVec[1 + 2 * j + 1]);
             outputStruct->nodes[i].push_back(tempPos);
             printf("\t\t%d: %d, %d\n", j, outputStruct->nodes[i][j].posX, outputStruct->nodes[i][j].posY);
-        }	
+        }
+    }
+
+    return true;
+}
+
+bool PopulateCellInfo(gridStruct_t *gridStruct)
+{
+    unsigned int i, j, currentX, currentY;
+    cellStruct_t tempCell;
+    std::vector<cellStruct_t> *tempCol;
+    cellStruct_t *currentCell;
+
+    //1. Initialize for current grid size
+    tempCell.currentCellProp = CELL_EMPTY;
+    tempCell.currentNet = -1;
+    tempCell.currentNumber = -1;
+    tempCell.norNeigh = NULL;
+    tempCell.easNeigh = NULL;
+    tempCell.souNeigh = NULL;
+    tempCell.wesNeigh = NULL;
+    for(i = 0; i < gridStruct->gridSizeX; i++)
+    {
+        tempCol = new std::vector<cellStruct_t>;
+        for(j = 0; j < gridStruct->gridSizeY; j++)
+        {
+            tempCol->push_back(tempCell);
+        }
+        gridStruct->cells.push_back(*tempCol);
+    }
+
+    //2. Populate coordinates and neighbour links
+    for(i = 0; i < gridStruct->gridSizeX; i++)
+    {
+        for(j = 0; j < gridStruct->gridSizeY; j++)
+        {
+            currentCell = &gridStruct->cells[i][j];
+
+            currentCell->coord.posX = i;
+            currentCell->coord.posY = j;
+
+            // Link northern neighbours
+            if(j != 0)
+            {
+                currentCell->norNeigh = &gridStruct->cells[i][j - 1];
+            }
+            // Link eastern neighbours
+            if(i != gridStruct->gridSizeX - 1)
+            {
+                currentCell->easNeigh = &gridStruct->cells[i + 1][j];
+            }
+            // Link southern neighbours
+            if(j != gridStruct->gridSizeY - 1)
+            {
+                currentCell->souNeigh = &gridStruct->cells[i][j + 1];
+            }
+            // Link western neighours
+            if(i != 0)
+            {
+                currentCell->wesNeigh = &gridStruct->cells[i - 1][j];
+            }
+        }
+    }
+
+    //3. Populate obstructions
+    for(i = 0; i < gridStruct->obstructions.size(); i++)
+    {
+        currentX = gridStruct->obstructions[i].posX;
+        currentY = gridStruct->obstructions[i].posY;
+
+        currentCell = &gridStruct->cells[currentX][currentY];
+
+        currentCell->currentCellProp = CELL_OBSTRUCTED;
+    }
+
+    //4. Populate net sources and sinks
+    for(i = 0; i < gridStruct->nodes.size(); i++)
+    {
+        for(j = 0; j < gridStruct->nodes[i].size(); j++)
+        {
+            currentX = gridStruct->nodes[i][j].posX;
+            currentY = gridStruct->nodes[i][j].posY;
+
+            currentCell = &gridStruct->cells[currentX][currentY];
+
+            currentCell->currentNet = i;
+
+            // If we're the first entry we are a source, otherwise we are a sink
+            if(j == 0)
+            {
+                currentCell->currentCellProp = CELL_NET_SOURCE;
+            }
+            else
+            {
+                currentCell->currentCellProp = CELL_NET_SINK;
+            }
+        }
     }
 
     return true;
@@ -137,148 +234,153 @@ std::vector<std::string> SplitString(std::string inString, char delimiter)
     return internal;
 }
 
+void DrawCell(cellStruct_t *cell)
+{
+    float currentXOrigin, currentYOrigin;
+    char strBuff[80];
+
+    // Make things clean by setting our origin here
+    currentXOrigin = (float)(GRID_PADDING_X + cell->coord.posX * GRID_SIZE_X);
+    currentYOrigin = (float)(GRID_PADDING_Y + cell->coord.posY * GRID_SIZE_Y);
+
+    set_draw_mode(DRAW_NORMAL);
+
+    // Depending on the cell type, draw the cell
+    switch(cell->currentCellProp)
+    {
+        case CELL_OBSTRUCTED:
+            setcolor(OBSTRUCTION_COLOR);
+            fillrect(
+                currentXOrigin, currentYOrigin,
+                currentXOrigin + GRID_SIZE_X, currentYOrigin + GRID_SIZE_Y
+            );
+            break;
+        case CELL_NET_WIRE:
+            setcolor(netColors[cell->currentNet & 7]);
+            fillrect(
+                currentXOrigin, currentYOrigin,
+                currentXOrigin + GRID_SIZE_X, currentYOrigin + GRID_SIZE_Y
+            );
+            break;
+        case CELL_NET_SOURCE:
+            setcolor(netColors[cell->currentNet & 7]);
+            fillrect(
+                currentXOrigin, currentYOrigin,
+                currentXOrigin + GRID_SIZE_X, currentYOrigin + GRID_SIZE_Y
+            );
+            setcolor(WHITE);
+            setfontsize(10);
+            drawtext(currentXOrigin + 0.5f*GRID_SIZE_X, currentYOrigin + 0.5f*GRID_SIZE_Y, "SRC", 800.);
+            break;
+        case CELL_NET_SINK:
+            setcolor(netColors[cell->currentNet & 7]);
+            fillrect(
+                currentXOrigin, currentYOrigin,
+                currentXOrigin + GRID_SIZE_X, currentYOrigin + GRID_SIZE_Y
+            );
+            setcolor(WHITE);
+            setfontsize(10);
+            drawtext(currentXOrigin + 0.5f*GRID_SIZE_X, currentYOrigin + 0.5f*GRID_SIZE_Y, "SNK", 800.);
+            break;
+        case CELL_EMPTY:
+            setcolor(GRID_COLOR);
+            drawrect(
+                currentXOrigin, currentYOrigin,
+                currentXOrigin + GRID_SIZE_X, currentYOrigin + GRID_SIZE_Y
+            );
+            break;
+        default:
+            // Should never be in here
+            break;
+    }
+
+    // During expansion, show the number
+    if(cell->currentNumber > 0)
+    {
+        sprintf(strBuff, "%d", cell->currentNumber);
+        setcolor(WHITE);
+        setfontsize(10);
+        drawtext(currentXOrigin + 0.5f*GRID_SIZE_X, currentYOrigin + 0.5f*GRID_SIZE_Y, strBuff, 800.);
+    }
+}
+
 void DrawScreen(void)
 {
     unsigned int i, j;
 
-    set_draw_mode(DRAW_NORMAL);  // Should set this if your program does any XOR drawing in callbacks.
+    set_draw_mode(DRAW_NORMAL);
     clearscreen();  /* Should precede drawing for all drawscreens */
 
     // Draw grid on screen
     setlinestyle(SOLID);
     setlinewidth(0);
-    setcolor(GRID_COLOR);
+
     for(i = 0; i < grid->gridSizeX; i++)
     {
         for(j = 0; j < grid->gridSizeY; j++)
         {
-            drawrect(
-                (float) (GRID_PADDING_X + i*GRID_SIZE_X), (float) (GRID_PADDING_Y + j*GRID_SIZE_Y),
-                (float) (GRID_PADDING_X + (i+1)*GRID_SIZE_X), (float) (GRID_PADDING_Y + (j+1)*GRID_SIZE_Y)
-            );
-        }
-    }
-
-    // Draw obstructions
-    setcolor(OBSTRUCTION_COLOR);
-    for(i = 0; i < grid->obstruction.size(); i++)
-    {
-        fillrect(
-            (float)(GRID_PADDING_X + grid->obstruction[i].posX * GRID_SIZE_X), (float)(GRID_PADDING_Y + grid->obstruction[i].posY * GRID_SIZE_Y),
-            (float)(GRID_PADDING_X + (grid->obstruction[i].posX+1) * GRID_SIZE_X), (float)(GRID_PADDING_Y + (grid->obstruction[i].posY+1) * GRID_SIZE_Y)
-        );
-    }
-
-    // Draw net sources and sinks
-    for(i = 0; i < grid->nodes.size(); i++)
-    {
-        // Set net's color
-        setcolor(netColors[i & 7]);
-        //setcolor(RED);
-        for(j = 0; j < grid->nodes[i].size(); j++)
-        {
-            // Draw each net's node's
-            fillrect(
-                (float)(GRID_PADDING_X + grid->nodes[i][j].posX * GRID_SIZE_X), (float)(GRID_PADDING_Y + grid->nodes[i][j].posY * GRID_SIZE_Y),
-                (float)(GRID_PADDING_X + (grid->nodes[i][j].posX + 1) * GRID_SIZE_X), (float)(GRID_PADDING_Y + (grid->nodes[i][j].posY + 1) * GRID_SIZE_Y)
-            );
+            // Draw cell
+            DrawCell(&grid->cells[i][j]);
         }
     }
 }
 
-
-void Delay(void)
+void LeeMooreInit(gridStruct_t *gridStruct)
 {
-    /* A simple delay routine for animation. */
-
-    int i, j, k, sum;
-
-    sum = 0;
-    for(i = 0; i < 100; i++)
-        for(j = 0; j < i; j++)
-            for(k = 0; k < 1000; k++)
-                sum = sum + i + j - k;
+    // Initialize algorithm state and starting net
+    gridStruct->currentRoutingState = STATE_LM_IDLE;
+    gridStruct->currentNet = 0;
 }
 
-
-void ActOnNewButtonFunc(void(*drawscreen_ptr) (void))
+void LeeMooreExec(gridStruct_t *gridStruct, stepType_e stepType)
 {
-    //char old_button_name[200], new_button_name[200];
-    //printf("You pressed the new button!\n");
-    //setcolor(MAGENTA);
-    //setfontsize(12);
-    //drawtext(500., 500., "You pressed the new button!", 10000.);
-    //sprintf(old_button_name, "%d Clicks", num_new_button_clicks);
-    //num_new_button_clicks++;
-    //sprintf(new_button_name, "%d Clicks", num_new_button_clicks);
-    //change_button_text(old_button_name, new_button_name);
-}
 
+}
 
 void ActOnButtonPress(float x, float y)
 {
     /* Called whenever event_loop gets a button press in the graphics *
      * area.  Allows the user to do whatever he/she wants with button *
      * clicks.                                                        */
-
     printf("User clicked a button at coordinates (%f, %f)\n", x, y);
-
-    //if(line_entering_demo)
-    //{
-    //	if(rubber_band_on)
-    //	{
-    //		rubber_band_on = false;
-    //		x2 = x;
-    //		y2 = y;
-    //		have_entered_line = true;  // both endpoints clicked on --> consider entered.
-
-    //		// Redraw screen to show the new line.  Could do incrementally, but this is easier.
-    //		DrawScreen();
-    //	}
-    //	else
-    //	{
-    //		rubber_band_on = true;
-    //		x1 = x;
-    //		y1 = y;
-    //		have_entered_line = false;
-    //		have_rubber_line = false;
-    //	}
-    //}
-
 }
-
-
 
 void ActOnMouseMove(float x, float y)
 {
     // function to handle mouse move event, the current mouse position in the current world coordinate
     // as defined as MAX_X and MAX_Y in init_world is returned
-
     printf("Mouse move at (%f,%f)\n", x, y);
-    //if(rubber_band_on)
-    //{
-    //	// Go into XOR mode.  Make sure we set the linestyle etc. for xor mode, since it is 
-    //	// stored in different state than normal mode.
-    //	set_draw_mode(DRAW_XOR);
-    //	setlinestyle(SOLID);
-    //	setcolor(WHITE);
-    //	setlinewidth(1);
-
-    //	if(have_rubber_line)
-    //	{
-    //		// Erase old line.  
-    //		drawline(x1, y1, x2, y2);
-    //	}
-    //	have_rubber_line = true;
-    //	x2 = x;
-    //	y2 = y;
-    //	drawline(x1, y1, x2, y2);  // Draw new line
-    //}
 }
-
 
 void ActOnKeyPress(char c)
 {
     // function to handle keyboard press event, the ASCII character is returned
     printf("Key press: %c\n", c);
+
+    switch(c)
+    {
+        case 'R':
+            printf("Resetting grid! \n");
+            // Populate cell information
+            PopulateCellInfo(grid);
+            // Initialize Lee Moore algorithm
+            LeeMooreInit(grid);
+            break;
+        case 'N':
+            printf("Taking a single step...\n");
+            LeeMooreExec(grid, STEP_SINGLE);
+            break;
+        case 'M':
+            printf("Attempting to route a single net...\n");
+            LeeMooreExec(grid, STEP_NET);
+            break;
+        case 'A':
+            printf("Attempting to route the entire grid...\n");
+            LeeMooreExec(grid, STEP_COMPLETE);
+        default:
+            break;
+    }
+
+    // redraw screen
+    DrawScreen();
 }
