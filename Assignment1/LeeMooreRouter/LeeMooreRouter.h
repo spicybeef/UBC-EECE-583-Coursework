@@ -39,6 +39,16 @@ typedef enum
     STEP_COMPLETE       ///< Attempt to route the entire grid
 } stepType_e;
 
+// This enum is a counter incrementing for each cardinal direction
+typedef enum
+{
+    DIR_NORTH = 0,
+    DIR_EAST,
+    DIR_SOUTH,
+    DIR_WEST,
+    DIR_NUM
+} cardinalDir_e;
+
 // This struct stores an X, Y position
 typedef struct
 {
@@ -50,31 +60,30 @@ typedef struct
 // This struct contains a cell's properties
 typedef struct Cell
 {
-    posStruct_t     coord;          ///< Cell's current coordinates
+    posStruct_t     coord;                  ///< Cell's current coordinates
 
-    int             currentNet;     ///< This is the current routed net
-    cellProp_e      currentCellProp;///< This is the current cell's property
+    int             currentNet;             ///< This is the current routed net
+    cellProp_e      currentCellProp;        ///< This is the current cell's property
 
-    int             currentNumber;  ///< This is the current expansion number
+    int             currentNumber;          ///< This is the current expansion number
 
-    Cell*           norNeigh;       ///< This is a pointer to the cell's northern neighbour
-    Cell*           easNeigh;       ///< This is a pointer to the cell's eastern neighbour
-    Cell*           souNeigh;       ///< This is a pointer to the cell's southern neighbour
-    Cell*           wesNeigh;       ///< This is a pointer to the cell's western neighbour
+    Cell*           neighbours[DIR_NUM];    ///< These are pointers to a cell's neighbours in each cardinal direction (indexed by cardinalDir_e)
 } cellStruct_t;
 
 typedef struct
 {
-    unsigned int gridSizeX;                         ///< The grid size in X
-    unsigned int gridSizeY;                         ///< The grid size in Y
+    unsigned int gridSizeX;                                 ///< The grid size in X
+    unsigned int gridSizeY;                                 ///< The grid size in Y
 
     // Input file storage
-    std::vector<posStruct_t> obstructions;          ///< This contains all of the obstructions
-    std::vector<std::vector<posStruct_t>> nodes;    ///< This contains all of the nets and their sources and sinks
+    std::vector<posStruct_t> obstructions;                  ///< This contains all of the obstructions
+    std::vector<std::vector<posStruct_t>> nodes;            ///< This contains all of the nets and their sources and sinks
 
     // Routing state
-    unsigned int    currentNet;                     ///< The current net being routed
-    routingState_e  currentRoutingState;            ///< The current routing state
+    unsigned int    currentNet;                             ///< The current net being routed
+    int             currentExpansion;                       ///< The current expansion layer
+    std::vector<std::vector<cellStruct_t*>> expansionList;  ///< A list containing the cells in the current expansion layer
+    routingState_e  currentRoutingState;                    ///< The current routing state
 
     // Grid cell properties
     std::vector<std::vector<cellStruct_t>> cells;   ///< These are the cells that make up the routing grid

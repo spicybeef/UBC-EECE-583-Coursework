@@ -148,10 +148,10 @@ bool PopulateCellInfo(gridStruct_t *gridStruct)
     tempCell.currentCellProp = CELL_EMPTY;
     tempCell.currentNet = -1;
     tempCell.currentNumber = -1;
-    tempCell.norNeigh = NULL;
-    tempCell.easNeigh = NULL;
-    tempCell.souNeigh = NULL;
-    tempCell.wesNeigh = NULL;
+    tempCell.neighbours[DIR_NORTH] = NULL;
+    tempCell.neighbours[DIR_EAST] = NULL;
+    tempCell.neighbours[DIR_SOUTH] = NULL;
+    tempCell.neighbours[DIR_WEST] = NULL;
     for(i = 0; i < gridStruct->gridSizeX; i++)
     {
         tempCol = new std::vector<cellStruct_t>;
@@ -175,22 +175,22 @@ bool PopulateCellInfo(gridStruct_t *gridStruct)
             // Link northern neighbours
             if(j != 0)
             {
-                currentCell->norNeigh = &gridStruct->cells[i][j - 1];
+                currentCell->neighbours[DIR_NORTH] = &gridStruct->cells[i][j - 1];
             }
             // Link eastern neighbours
             if(i != gridStruct->gridSizeX - 1)
             {
-                currentCell->easNeigh = &gridStruct->cells[i + 1][j];
+                currentCell->neighbours[DIR_EAST] = &gridStruct->cells[i + 1][j];
             }
             // Link southern neighbours
             if(j != gridStruct->gridSizeY - 1)
             {
-                currentCell->souNeigh = &gridStruct->cells[i][j + 1];
+                currentCell->neighbours[DIR_SOUTH] = &gridStruct->cells[i][j + 1];
             }
             // Link western neighours
             if(i != 0)
             {
-                currentCell->wesNeigh = &gridStruct->cells[i - 1][j];
+                currentCell->neighbours[DIR_WEST] = &gridStruct->cells[i - 1][j];
             }
         }
     }
@@ -343,11 +343,85 @@ void LeeMooreInit(gridStruct_t *gridStruct)
     // Initialize algorithm state and starting net
     gridStruct->currentRoutingState = STATE_LM_IDLE;
     gridStruct->currentNet = 0;
+    gridStruct->currentExpansion = 0;
 }
 
 void LeeMooreExec(gridStruct_t *gridStruct, stepType_e stepType)
 {
+    char strBuff[80];
+    unsigned int x, y, i, dir;
+    cellStruct_t* currentCell;
+    std::vector<cellStruct_t*> *currentExpansionList;
 
+    // Execute routing step based on current state
+    switch(gridStruct->currentRoutingState)
+    {
+        case STATE_LM_IDLE:
+            // Ready to route! Go to expansion...
+            sprintf(strBuff, "Ready to route! Next net: %d", gridStruct->currentNet);
+            update_message(strBuff);
+            gridStruct->currentRoutingState = STATE_LM_EXPANSION;
+            break;
+        case STATE_LM_EXPANSION:
+            // Expansion state for current net
+            sprintf(strBuff, "Currently expanding net: %d layer: %d", gridStruct->currentNet, gridStruct->currentExpansion);
+            update_message(strBuff);
+            // Push a new expansion list for this layer
+            currentExpansionList = new std::vector<cellStruct_t*>;
+            gridStruct->expansionList.push_back(*currentExpansionList);
+            // If we are at our first expansion, give the source the expansion of 0 and add it to the list
+            if(gridStruct->currentExpansion == 0)
+            {
+                // First node is the source
+                x = gridStruct->nodes[gridStruct->currentNet][0].posX;
+                y = gridStruct->nodes[gridStruct->currentNet][1].posY;
+                gridStruct->expansionList[gridStruct->currentExpansion].push_back(&gridStruct->cells[x][y]);
+                // Give our source an expansion of 0
+                gridStruct->cells[x][y].currentNumber = 0;
+            }
+            // We've started expanding already
+            else
+            {
+                printf("Cells to visit for expansion: %d\n", gridStruct->expansionList[gridStruct->currentExpansion - 1].size());
+                // For each cell in the previous layer's expansion list, expand into the new (current) expansion
+                for(i = 0; i < gridStruct->expansionList[gridStruct->currentExpansion - 1].size(); i++)
+                {
+                    // Get a pointer to the current cell
+                    currentCell = gridStruct->expansionList[gridStruct->currentExpansion - 1][i];
+
+                    // For each cardinal direction
+                    for(dir = DIR_NORTH; dir < DIR_NUM; dir++)
+                    {
+                        // Make sure we have a cell to look at
+                        if(currentCell->neighbours[dir] == NULL)
+                        {
+                            break;
+                        }
+
+                        // Check if the cell is routeable (it's empty and isn't part of a routing layer
+                        if(currentCell->neighbours[dir]->currentCellProp == CELL_EMPTY && currentCell->neighbours[dir]->currentNumber == -1)
+                        {
+                            // We found a routeable cell! Mark it for the current expansion
+                            currentCell->neighbours[dir]->currentNumber = gridStruct->currentExpansion;
+                            // Add a reference to it for the current expansion list
+                            gridStruct->expansionList[gridStruct->currentExpansion].push_back(currentCell->neighbours[dir]);
+                        }
+                    }
+                }
+            }
+            // Go to the next expansion layer
+            gridStruct->currentExpansion++;
+            break;
+        case STATE_LM_WALKBACK:
+            break;
+        case STATE_LM_ROUTE_FAILURE:
+            break;
+        case STATE_LM_ROUTE_SUCCESS:
+            // Clear expansion list
+            break;
+        default:
+            break;
+    }
 }
 
 void ActOnButtonPress(float x, float y)
