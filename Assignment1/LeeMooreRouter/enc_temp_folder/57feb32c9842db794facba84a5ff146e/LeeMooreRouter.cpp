@@ -27,8 +27,8 @@ color_types netColors[MAX_NET_COLORS] =
 int main(int argc, char **argv)
 {
     std::string line;
-    char * filename = argv[1];
-    //const char * filename = "..\\benchmarks\\kuma.infile";
+    //char * filename = argv[1];
+    const char * filename = "..\\benchmarks\\kuma.infile";
 
     // Filename to read in is the second argument
     std::ifstream myfile(filename, std::ios::in);
