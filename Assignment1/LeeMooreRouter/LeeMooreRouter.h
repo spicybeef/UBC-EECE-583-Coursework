@@ -7,9 +7,11 @@
 // Constants used in drawing
 
 #define GRID_COLOR				DARKGREY
-#define OBSTRUCTION_COLOR		BLUE
-
+#define OBSTRUCTION_COLOR		LIGHTGREY
 #define MAX_NET_COLORS          8
+
+// Constants used in the algorithm
+#define MAXIMUM_ROUTING_RETRIES 50
 
 // This enum contains the Lee Moore routing algorithm's state
 typedef enum
@@ -27,8 +29,10 @@ typedef enum
     CELL_EMPTY = 0,
     CELL_OBSTRUCTED,
     CELL_NET_SOURCE,
-    CELL_NET_SINK,
-    CELL_NET_WIRE
+    CELL_NET_SINK_UNCONN,
+    CELL_NET_SINK_CONN,
+    CELL_NET_WIRE_UNCONN,
+    CELL_NET_WIRE_CONN
 } cellProp_e;
 
 // This enum defines how large of a step to take in the algorithm
@@ -72,31 +76,43 @@ typedef struct Cell
 
 typedef struct
 {
-    unsigned int gridSizeX;                                 ///< The grid size in X
-    unsigned int gridSizeY;                                 ///< The grid size in Y
-
     // Input file storage
-    std::vector<posStruct_t> obstructions;                  ///< This contains all of the obstructions
-    std::vector<std::vector<posStruct_t>> nodes;            ///< This contains all of the nets and their sources and sinks
+    unsigned int                            gridSizeX;          ///< The grid size in X
+    unsigned int                            gridSizeY;          ///< The grid size in Y
 
-    // Routing state
-    unsigned int    currentNet;                             ///< The current net being routed
-    int             currentExpansion;                       ///< The current expansion layer
-    std::vector<std::vector<cellStruct_t*>> expansionList;  ///< A list containing the cells in the current expansion layer
-    routingState_e  currentRoutingState;                    ///< The current routing state
+    std::vector<posStruct_t>                obstructions;       ///< This contains all of the obstructions
+    std::vector<std::vector<posStruct_t>>   nodes;              ///< This contains all of the nets and their sources and sinks
+} parsedInputStruct_t;
+
+typedef struct
+{
+    // Routing variables
+    unsigned int                            currentNet;         ///< The current net being routed
+    std::vector<unsigned int>               netRoutedNodes;     ///< A counter for every net to keep track of how many nodes left to route
+    cellStruct_t                            *lastCell;          ///< A pointer for the last cell to walk back from
+    int                                     currentExpansion;   ///< The current expansion layer
+    std::vector<std::vector<cellStruct_t*>> expansionList;      ///< A list containing the cells in the current expansion layer
+    std::vector<cellStruct_t*>              lastRoute;          ///< Keep a list of the last route in case we need to route to additional sinks
+    routingState_e                          currentRoutingState;///< The current routing state
+    unsigned int                            currentRetries;     ///< A counter for additional attempts to route a grid
 
     // Grid cell properties
-    std::vector<std::vector<cellStruct_t>> cells;   ///< These are the cells that make up the routing grid
+    std::vector<std::vector<cellStruct_t>>  cells;              ///< These are the cells that make up the routing grid
 
 } gridStruct_t;
-
-void Delay(void);
 
 void DrawScreen(void);
 void DrawCell(cellStruct_t *cell);
 
-void LeeMooreInit(gridStruct_t *gridStruct);
-void LeeMooreExec(gridStruct_t *gridStruct, stepType_e stepType);
+// LeeMoore Algorithm
+void LeeMooreInit(parsedInputStruct_t *parsedInputStruct, gridStruct_t *gridStruct);
+void LeeMooreExec(parsedInputStruct_t *parsedInputStruct, gridStruct_t *gridStruct, stepType_e stepType);
+
+// Helpers
+int MyRandomInt(int i);
+void ResetCellExpansion(gridStruct_t *gridStruct);
+bool ParseInputFile(std::ifstream *inputFile, parsedInputStruct_t *inputStruct);
+bool PopulateCellInfo(parsedInputStruct_t *parsedInputStruct, gridStruct_t *gridStruct);
 
 void ActOnNewButtonFunc(void(*drawscreen_ptr)(void));
 void ActOnButtonPress(float x, float y);
