@@ -366,23 +366,6 @@ void DrawScreen(void)
             DrawCell(&grid->cells[i][j]);
         }
     }
-
-    //currentXOrigin = (float)(gridMarginX + cell->coord.posX * cellSizeX);
-    //currentYOrigin = (float)(gridMarginY + cell->coord.posY * cellSizeY);
-
-    //// Draw indices
-    //for(i = 0; i < grid->gridSizeX; i++)
-    //{
-    //    setcolor(WHITE);
-    //    setfontsize(10);
-    //    drawtext(currentXOrigin + 0.5f*cellSizeX, gridMarginY -, "SRC", 800.);
-    //}
-    //for(j = 0; j < grid->gridSizeY; j++)
-    //{
-    //    setcolor(WHITE);
-    //    setfontsize(10);
-    //    drawtext(currentXOrigin + 0.5f*cellSizeX, currentYOrigin + 0.5f*cellSizeY, "SRC", 800.);
-    //}
 }
 
 void LeeMooreInit(parsedInputStruct_t *parsedInputStruct, gridStruct_t *gridStruct)
@@ -601,6 +584,12 @@ void LeeMooreExec(parsedInputStruct_t *parsedInputStruct, gridStruct_t *gridStru
                             // Clear the last route
                             gridStruct->lastRoute.clear();
                             gridStruct->currentNet++;
+                            // Save this grid if it's our best yet
+                            if(gridStruct->currentNet > gridStruct->bestNetsRouted)
+                            {
+                                gridStruct->bestNetsRouted = gridStruct->currentNet;
+                                gridStruct->bestGrid = gridStruct->cells;
+                            }
                             // Check if this was our last net
                             if(gridStruct->currentNet == parsedInputStruct->nodes.size())
                             {
@@ -636,7 +625,8 @@ void LeeMooreExec(parsedInputStruct_t *parsedInputStruct, gridStruct_t *gridStru
                 // We failed the last route, don't keep routing :(
                 sprintf(strBuff, "Route failed on net %d!", gridStruct->currentNet);
                 update_message(strBuff);
-                printf("Route failed!\n");
+                gridStruct->cells = gridStruct->bestGrid;
+                printf("Route failed - showing best grid!\n");
                 keepRouting = false;
                 break;
             case STATE_LM_ROUTE_SUCCESS:

@@ -99,6 +99,9 @@ typedef struct
     // Grid cell properties
     std::vector<std::vector<cellStruct_t>>  cells;              ///< These are the cells that make up the routing grid
 
+    unsigned int                            bestNetsRouted;     ///< Keep track of the maximum number of nets we managed to route
+    std::vector<std::vector<cellStruct_t>>  bestGrid;          ///< Save our best grid
+
 } gridStruct_t;
 
 void DrawScreen(void);

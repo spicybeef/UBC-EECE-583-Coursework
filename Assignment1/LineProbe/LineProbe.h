@@ -12,7 +12,7 @@
 #define MAX_NET_COLORS          8
 
 // Constants used in the algorithm
-#define MAXIMUM_ROUTING_RETRIES 200
+#define MAXIMUM_ROUTING_RETRIES 500
 
 // This enum contains the Lee Moore routing algorithm's state
 typedef enum
@@ -105,9 +105,6 @@ typedef struct
     cardinalDir_e                                           nextNodeDir[2];     ///< The direction of the next node
     directionIndex_e                                        directionIndex;     ///< The index of the current direction we are routing
     cellStruct_t                                            *nextNodePointer;   ///< A pointer to the next node
-    
-    int                                                     cellsLeftX;         ///< Cells left to target X
-    int                                                     cellsLeftY;         ///< Cells left to target Y
 
     std::vector<unsigned int>                               netRoutedNodes;     ///< A counter for every net to keep track of how many nodes left to route
     cellStruct_t                                            *lastCell;          ///< A pointer for the last cell to walk back from
@@ -119,6 +116,9 @@ typedef struct
 
     // Grid cell properties
     std::vector<std::vector<cellStruct_t>>                  cells;              ///< These are the cells that make up the routing grid
+
+    unsigned int                                            bestNetsRouted;     ///< Keep track of the maximum number of nets we managed to route
+    std::vector<std::vector<cellStruct_t>>                  bestGrid;           ///< Save our best grid
 
 } gridStruct_t;
 

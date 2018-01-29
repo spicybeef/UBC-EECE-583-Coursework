@@ -28,7 +28,7 @@ int main(int argc, char **argv)
 {
     std::string line;
     char * filename = argv[1];
-    //const char * filename = "..\\benchmarks\\wavy.infile";
+    //const char * filename = "..\\benchmarks\\temp.infile";
 
     // Filename to read in is the second argument
     std::ifstream myfile(filename, std::ios::in);
@@ -48,6 +48,8 @@ int main(int argc, char **argv)
     ParseInputFile(&myfile, input);
     // Initialize Lee Moore algorithm
     LineProbeInit(input, grid);
+    // At the start, our best grid doesn't exist yet
+    grid->bestNetsRouted = 0;
 
     // Scale cells and padding to current grid
     cellSizeX = 1280 / (input->gridSizeX + 4);
@@ -395,6 +397,7 @@ void LineProbeExec(parsedInputStruct_t *parsedInputStruct, gridStruct_t *gridStr
     bool doneExpansion;
     bool doneSeek;
     bool keepRouting;
+    bool allRouted;
 
     unsigned int x0, y0, i, dir, currentNet;
     unsigned int distanceDelta[2];
@@ -576,7 +579,15 @@ void LineProbeExec(parsedInputStruct_t *parsedInputStruct, gridStruct_t *gridStr
                     gridStruct->directionIndex = DIR_IDX_NUM;
 
                     // Check if we've finished routing this net
-                    if(gridStruct->netRoutedNodes[gridStruct->currentNet] == 0)
+                    allRouted = true;
+                    for(i = 0; i < gridStruct->currentNodes.size(); i++)
+                    {
+                        if(gridStruct->currentNodes[i]->currentCellProp == CELL_NET_NODE_UNCONN)
+                        {
+                            allRouted = false;
+                        }
+                    }
+                    if(allRouted)
                     {
                         // Update the screen
                         DrawScreen();
@@ -586,6 +597,12 @@ void LineProbeExec(parsedInputStruct_t *parsedInputStruct, gridStruct_t *gridStr
                         gridStruct->currentNet++;
                         gridStruct->currentNodes.clear();
                         gridStruct->currentEdges.clear();
+                        // Save this grid if it's our best yet
+                        if(gridStruct->currentNet > gridStruct->bestNetsRouted)
+                        {
+                            gridStruct->bestNetsRouted = gridStruct->currentNet;
+                            gridStruct->bestGrid = gridStruct->cells;
+                        }
                         // Check if this was our last net
                         if(gridStruct->currentNet == parsedInputStruct->nodes.size())
                         {
@@ -744,7 +761,8 @@ void LineProbeExec(parsedInputStruct_t *parsedInputStruct, gridStruct_t *gridStr
                 // We failed the last route, don't keep routing :(
                 sprintf(strBuff, "Route failed on net %d!", gridStruct->currentNet);
                 update_message(strBuff);
-                printf("Route failed!\n");
+                gridStruct->cells = gridStruct->bestGrid;
+                printf("Route failed - showing best grid!\n");
                 keepRouting = false;
                 break;
             case STATE_LP_ROUTE_SUCCESS:
