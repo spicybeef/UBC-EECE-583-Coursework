@@ -10,7 +10,7 @@
 #include <cstdlib>
 
 #include "graphics.h"
-#include "LeeMooreRouter.h"
+#include "LineProbe.h"
 
 parsedInputStruct_t *input = new parsedInputStruct_t();
 gridStruct_t *grid = new gridStruct_t();
@@ -28,7 +28,7 @@ int main(int argc, char **argv)
 {
     std::string line;
     //char * filename = argv[1];
-    const char * filename = "..\\benchmarks\\kuma.infile";
+    const char * filename = "..\\benchmarks\\stdcell.infile";
 
     // Filename to read in is the second argument
     std::ifstream myfile(filename, std::ios::in);
@@ -47,7 +47,7 @@ int main(int argc, char **argv)
     // Parse input file
     ParseInputFile(&myfile, input);
     // Initialize Lee Moore algorithm
-    LeeMooreInit(input, grid);
+    LineProbeInit(input, grid);
 
     // Scale cells and padding to current grid
     cellSizeX = 1280 / (input->gridSizeX + 4);
@@ -216,7 +216,7 @@ bool PopulateCellInfo(parsedInputStruct_t *parsedInputStruct, gridStruct_t *grid
         currentCell->currentCellProp = CELL_OBSTRUCTED;
     }
 
-    //4. Populate net sources and sinks
+    //4. Populate net nodes
     for(i = 0; i < parsedInputStruct->nodes.size(); i++)
     {
         for(j = 0; j < parsedInputStruct->nodes[i].size(); j++)
@@ -228,15 +228,7 @@ bool PopulateCellInfo(parsedInputStruct_t *parsedInputStruct, gridStruct_t *grid
 
             currentCell->currentNet = i;
 
-            // If we're the first entry we are a source, otherwise we are a sink
-            if(j == 0)
-            {
-                currentCell->currentCellProp = CELL_NET_SOURCE;
-            }
-            else
-            {
-                currentCell->currentCellProp = CELL_NET_SINK_UNCONN;
-            }
+            currentCell->currentCellProp = CELL_NET_NODE_UNCONN;
         }
     }
 
@@ -295,7 +287,7 @@ void DrawCell(cellStruct_t *cell)
                 currentXOrigin + cellSizeX, currentYOrigin + cellSizeY
             );
             break;
-        case CELL_NET_SOURCE:
+        case CELL_NET_NODE_UNCONN:
             setcolor(netColors[cell->currentNet & 7]);
             fillrect(
                 currentXOrigin, currentYOrigin,
@@ -303,9 +295,9 @@ void DrawCell(cellStruct_t *cell)
             );
             setcolor(WHITE);
             setfontsize(10);
-            drawtext(currentXOrigin + 0.5f*cellSizeX, currentYOrigin + 0.5f*cellSizeY, "SRC", 800.);
+            drawtext(currentXOrigin + 0.5f*cellSizeX, currentYOrigin + 0.5f*cellSizeY, "NODE_X", 800.);
             break;
-        case CELL_NET_SINK_UNCONN:
+        case CELL_NET_NODE_CONN:
             setcolor(netColors[cell->currentNet & 7]);
             fillrect(
                 currentXOrigin, currentYOrigin,
@@ -313,17 +305,7 @@ void DrawCell(cellStruct_t *cell)
             );
             setcolor(WHITE);
             setfontsize(10);
-            drawtext(currentXOrigin + 0.5f*cellSizeX, currentYOrigin + 0.5f*cellSizeY, "SNK_X", 800.);
-            break;
-        case CELL_NET_SINK_CONN:
-            setcolor(netColors[cell->currentNet & 7]);
-            fillrect(
-                currentXOrigin, currentYOrigin,
-                currentXOrigin + cellSizeX, currentYOrigin + cellSizeY
-            );
-            setcolor(WHITE);
-            setfontsize(10);
-            drawtext(currentXOrigin + 0.5f*cellSizeX, currentYOrigin + 0.5f*cellSizeY, "SNK", 800.);
+            drawtext(currentXOrigin + 0.5f*cellSizeX, currentYOrigin + 0.5f*cellSizeY, "NODE", 800.);
             break;
         case CELL_EMPTY:
             setcolor(GRID_COLOR);
@@ -385,17 +367,29 @@ void DrawScreen(void)
     //}
 }
 
-void LeeMooreInit(parsedInputStruct_t *parsedInputStruct, gridStruct_t *gridStruct)
+void LineProbeInit(parsedInputStruct_t *parsedInputStruct, gridStruct_t *gridStruct)
 {
     unsigned int i;
     // Shuffle the net order
     std::random_shuffle(input->nodes.begin(), input->nodes.end(), MyRandomInt);
+    // Shuffle the node order
+    for(i = 0; i < input->nodes.size(); i++)
+    {
+        std::random_shuffle(input->nodes[i].begin(), input->nodes[i].end(), MyRandomInt);
+    }
     // Populate cell information
     PopulateCellInfo(input, grid);
     // Initialize algorithm state and starting net
-    gridStruct->currentRoutingState = STATE_LM_IDLE;
+    gridStruct->currentRoutingState = STATE_LP_IDLE;
     gridStruct->currentNet = 0;
+    gridStruct->currentNode = 0;
     gridStruct->currentExpansion = 0;
+    gridStruct->currentNodes.clear();
+    gridStruct->currentEdges.clear();
+    gridStruct->currentNodePointer = NULL;
+    gridStruct->nextNodePointer = NULL;
+    gridStruct->nextNodeDir[DIR_IDX_NS_Y] = DIR_NUM;
+    gridStruct->nextNodeDir[DIR_IDX_EW_X] = DIR_NUM;
     // Clear out the expansion list
     gridStruct->expansionList.clear();
     // Clear our our last route
@@ -411,15 +405,24 @@ void LeeMooreInit(parsedInputStruct_t *parsedInputStruct, gridStruct_t *gridStru
     }
 }
 
-void LeeMooreExec(parsedInputStruct_t *parsedInputStruct, gridStruct_t *gridStruct, stepType_e stepType)
+void LineProbeExec(parsedInputStruct_t *parsedInputStruct, gridStruct_t *gridStruct, stepType_e stepType)
 {
     char strBuff[80];
+
     bool doneExpansion;
     bool doneWalkback;
+    bool doneSeek;
     bool keepRouting;
-    unsigned int x, y, i, dir, currentNet;
+
+    unsigned int x0, y0, x1, y1, i, dir, currentNet;
+    unsigned int distanceDelta[2];
+    unsigned int smallestDistance;
+    unsigned int currentDistance;
+
     cellStruct_t* currentCell;
+    cardinalDir_e currentDirection;
     std::vector<cellStruct_t*> *currentExpansionList;
+    std::vector<cellStruct_t*> *tempCellList;
 
     // Initially we don't keep routing
     keepRouting = false;
@@ -432,42 +435,219 @@ void LeeMooreExec(parsedInputStruct_t *parsedInputStruct, gridStruct_t *gridStru
         // Execute routing step based on current state
         switch(gridStruct->currentRoutingState)
         {
-            case STATE_LM_IDLE:
+            case STATE_LP_IDLE:
                 // Ready to route! Go to expansion...
                 sprintf(strBuff, "Ready to route! Next net: %d", gridStruct->currentNet);
                 update_message(strBuff);
-                gridStruct->currentRoutingState = STATE_LM_EXPANSION;
+
+                //TODO: Find a better place for this
+                gridStruct->directionIndex = DIR_IDX_NUM;
+
+                gridStruct->currentRoutingState = STATE_LP_SEEK;
                 break;
-            case STATE_LM_EXPANSION:
-                doneExpansion = false;
-                // Expansion state for current net
-                sprintf(strBuff, "Currently expanding net: %d layer: %d", gridStruct->currentNet, gridStruct->currentExpansion);
+            case STATE_LP_SEEK:
+                doneSeek = false;
+                sprintf(strBuff, "Currently seeking net: %d node: %d", gridStruct->currentNet, gridStruct->netRoutedNodes[gridStruct->currentNet]);
                 update_message(strBuff);
+                
+                // Check to see if we have nodes for this net
+                if(gridStruct->currentNodes.size() == 0)
+                {
+                    // We must be starting fresh, populate node list
+                    for(i = 0; i < parsedInputStruct->nodes[gridStruct->currentNet].size(); i++)
+                    {
+                        x0 = parsedInputStruct->nodes[gridStruct->currentNet][i].posX;
+                        y0 = parsedInputStruct->nodes[gridStruct->currentNet][i].posY;
+
+                        gridStruct->currentNodes.push_back(&gridStruct->cells[x0][y0]);
+                    }
+
+                    gridStruct->currentNodePointer = NULL;
+                    gridStruct->nextNodePointer = NULL;
+                }
+
+                // If we don't have a source and target
+                if(gridStruct->currentNodePointer == NULL && gridStruct->nextNodePointer == NULL)
+                {
+                    // Go through the node list and find the first unconnected node, this will be the first target
+                    for(i = 0; i < gridStruct->currentNodes.size(); i++)
+                    {
+                        if(gridStruct->currentNodes[i]->currentCellProp == CELL_NET_NODE_UNCONN)
+                        {
+                            gridStruct->nextNodePointer = gridStruct->currentNodes[i];
+                        }
+                    }
+                    // Now find the closest node to our target
+                    // Start off with an absurdly large distance
+                    smallestDistance = 0xDEADBEEF;
+                    for(i = 0; i < gridStruct->currentNodes.size(); i++)
+                    {
+                        // If we don't have any edges yet, only look at already connected ones
+                        // This will prevent disconnected nets
+                        if(gridStruct->currentEdges.size() > 0)
+                        {
+                            if(gridStruct->currentNodes[i]->currentCellProp == CELL_NET_NODE_UNCONN)
+                            {
+                                continue;
+                            }
+                        }
+                        // Take note of how long each direction is
+                        GetDistanceDelta(gridStruct->currentNodes[i], gridStruct->nextNodePointer, distanceDelta);
+                        // Compare Manhattan distances
+                        currentDistance = distanceDelta[DIR_IDX_EW_X] + distanceDelta[DIR_IDX_NS_Y];
+                        // If it's less than the current smallest and not the same node
+                        if(currentDistance < smallestDistance && currentDistance != 0)
+                        {
+                            // It's our new source
+                            smallestDistance = currentDistance;
+                            gridStruct->currentNodePointer = gridStruct->currentNodes[i];
+                        }
+                    }
+                }
+
+                // Fresh node, let's get started
+                if(gridStruct->directionIndex == DIR_IDX_NUM)
+                {   
+                    // No direction yet, determine direction of next node
+                    GetDirection(gridStruct->currentNodePointer, gridStruct->nextNodePointer, gridStruct);
+                    // Take note of how long each direction is
+                    GetDistanceDelta(gridStruct->currentNodePointer, gridStruct->nextNodePointer, distanceDelta);
+                     
+                    printf("Deltas between (%d, %d) and (%d, %d) is (%d, %d)\n",
+                        gridStruct->currentNodePointer->coord.posX,
+                        gridStruct->currentNodePointer->coord.posY,
+                        gridStruct->nextNodePointer->coord.posX,
+                        gridStruct->nextNodePointer->coord.posY,
+                        distanceDelta[DIR_IDX_EW_X], distanceDelta[DIR_IDX_NS_Y]);
+
+                    // Head into the longest direction
+                    if(distanceDelta[DIR_IDX_EW_X] > distanceDelta[DIR_IDX_NS_Y])
+                    {
+                        gridStruct->directionIndex = DIR_IDX_EW_X;
+                    }
+                    else
+                    {
+                        gridStruct->directionIndex = DIR_IDX_NS_Y;
+                    }
+
+                    // Seek out from source
+                    gridStruct->currentNodePointer->currentCellProp = CELL_NET_NODE_CONN;
+                    gridStruct->lastRoute.push_back(gridStruct->currentNodePointer);
+                }
+
+                // Grab our current cell
+                currentCell = gridStruct->lastRoute.back();
+                // Grab our current direction
+                currentDirection = gridStruct->nextNodeDir[gridStruct->directionIndex];
+ 
+                // Seek in the direction
+                // We should never be null, but fail in case we do
+                if(currentCell->neighbours[gridStruct->directionIndex] == NULL)
+                {
+                    gridStruct->currentRoutingState = STATE_LP_ROUTE_FAILURE;
+                }
+
+                // Empty cell, hop on in!
+                else if(currentCell->neighbours[currentDirection]->currentCellProp == CELL_EMPTY)
+                {
+                    // Append to last route
+                    gridStruct->lastRoute.push_back(currentCell->neighbours[currentDirection]);
+
+                    // Update direction
+                    GetDirection(gridStruct->lastRoute.back(), gridStruct->nextNodePointer, gridStruct);
+
+                    // Change cell properties
+                    gridStruct->lastRoute.back()->currentNet = gridStruct->currentNet;
+                    gridStruct->lastRoute.back()->currentCellProp = CELL_NET_WIRE_CONN;
+
+                    // Do we need to change direction?
+                    GetDistanceDelta(gridStruct->lastRoute.back(), gridStruct->nextNodePointer, distanceDelta);
+                    if(distanceDelta[DIR_IDX_EW_X] == 0)
+                    {
+                        // We've closed in our X, switch to Y
+                        gridStruct->directionIndex = DIR_IDX_NS_Y;
+                    }
+                    else if(distanceDelta[DIR_IDX_NS_Y] == 0)
+                    {
+                        // We've closed in on our Y, switch to X
+                        gridStruct->directionIndex = DIR_IDX_EW_X;
+                    }
+                }
+                // Check if we've reached our destination
+                else if(currentCell->neighbours[currentDirection]->currentCellProp == CELL_NET_NODE_UNCONN && currentCell->neighbours[currentDirection]->currentNet == gridStruct->currentNet)
+                {
+                    printf("Found unconnected node!\n");
+
+                    // Append to last route
+                    gridStruct->lastRoute.push_back(currentCell->neighbours[currentDirection]);
+
+                    // Change cell properties
+                    gridStruct->lastRoute.back()->currentCellProp = CELL_NET_NODE_CONN;
+
+                    // Add the edge to our current edge list
+                    gridStruct->currentEdges.push_back(std::make_pair(gridStruct->currentNodePointer, gridStruct->nextNodePointer));
+
+                    // Next node!
+                    gridStruct->currentNodePointer = NULL;
+                    gridStruct->nextNodePointer = NULL;
+                    gridStruct->netRoutedNodes[gridStruct->currentNet]--;
+                    gridStruct->directionIndex = DIR_IDX_NUM;
+
+                    // Check if we've finished routing this net
+                    if(gridStruct->netRoutedNodes[gridStruct->currentNet] == 0)
+                    {
+                        // Update the screen
+                        DrawScreen();
+                        // Clear the last route
+                        gridStruct->lastRoute.clear();
+                        // Go to the next net
+                        gridStruct->currentNet++;
+                        gridStruct->currentNodes.clear();
+                        gridStruct->currentEdges.clear();
+                        // Check if this was our last net
+                        if(gridStruct->currentNet == parsedInputStruct->nodes.size())
+                        {
+                            // If so, we're done!
+                            gridStruct->currentRoutingState = STATE_LP_ROUTE_SUCCESS;
+                        }
+                        else
+                        {
+                            // More nets to route...
+                            gridStruct->currentRoutingState = STATE_LP_SEEK;
+                        }
+                    }
+                }
+                // Check if we've run into something we can't route
+                else if(currentCell->neighbours[currentDirection]->currentCellProp != CELL_EMPTY)
+                {
+                    printf("Uh oh, obstruction...\n");
+
+                    // Start expansion!
+                    gridStruct->currentExpansion = 0;
+                    gridStruct->currentRoutingState = STATE_LP_EXPANSION;
+                }
+
+                break;
+            case STATE_LP_EXPANSION:
+                doneExpansion = false;
+                // Expansion state for current obstruction
+                sprintf(strBuff, "Currently expanding net: %d at: (%d, %d) layer: %d", gridStruct->currentNet, gridStruct->lastRoute.back()->coord.posX, gridStruct->lastRoute.back()->coord.posY, gridStruct->currentExpansion);
+                update_message(strBuff);
+
                 // Push a new expansion list for this layer
                 currentExpansionList = new std::vector<cellStruct_t*>;
                 gridStruct->expansionList.push_back(*currentExpansionList);
 
-                // If we are at our first expansion and not our first node, give the last route cells an expansion of 0 and add them to the expansion list
-                // (If we're on the first node, then we still have nodes - 1 to route, anything less and we're on subsequent routes)
-                if(gridStruct->currentExpansion == 0 &&
-                    gridStruct->netRoutedNodes[gridStruct->currentNet] < (parsedInputStruct->nodes[gridStruct->currentNet].size() - 1))
-                {
-                    // Add the last route to the expansion list and make them all an expansion of 0
-                    for(i = 0; i < gridStruct->lastRoute.size(); i++)
-                    {
-                        gridStruct->lastRoute[i]->currentNumber = 0;
-                        gridStruct->expansionList[gridStruct->currentExpansion].push_back(gridStruct->lastRoute[i]);
-                    }
-                }
+                // Grab our current direction
+                currentDirection = gridStruct->nextNodeDir[gridStruct->directionIndex];
+
                 // If we are at our first expansion and our first node, give the source the expansion of 0 and add it to the list
-                else if(gridStruct->currentExpansion == 0)
+                if(gridStruct->currentExpansion == 0)
                 {
-                    // First node is the source
-                    x = parsedInputStruct->nodes[gridStruct->currentNet][0].posX;
-                    y = parsedInputStruct->nodes[gridStruct->currentNet][0].posY;
-                    gridStruct->expansionList[gridStruct->currentExpansion].push_back(&gridStruct->cells[x][y]);
+                    // Last item in last route is the expansion seed
+                    gridStruct->expansionList[gridStruct->currentExpansion].push_back(gridStruct->lastRoute.back());
                     // Give our source an expansion of 0
-                    gridStruct->cells[x][y].currentNumber = 0;
+                    gridStruct->lastRoute.back()->currentNumber = 0;
                 }
                 // We've started expanding already
                 else
@@ -478,7 +658,7 @@ void LeeMooreExec(parsedInputStruct_t *parsedInputStruct, gridStruct_t *gridStru
                     {
                         // Reset our expansion
                         ResetCellExpansion(gridStruct);
-                        gridStruct->currentRoutingState = STATE_LM_ROUTE_FAILURE;
+                        gridStruct->currentRoutingState = STATE_LP_ROUTE_FAILURE;
                         doneExpansion = true;
                         break;
                     }
@@ -496,16 +676,56 @@ void LeeMooreExec(parsedInputStruct_t *parsedInputStruct, gridStruct_t *gridStru
                             {
                                 continue;
                             }
-                            // Check if the cell is an unconnected sink and it's our net
-                            else if(currentCell->neighbours[dir]->currentCellProp == CELL_NET_SINK_UNCONN &&
-                                currentCell->neighbours[dir]->currentNet == gridStruct->currentNet)
+                            // Check if the cell is routeable in the direction we want (this is what we are primarily looking for)
+                            else if(currentCell->neighbours[currentDirection]->currentCellProp == CELL_EMPTY && currentCell->neighbours[currentDirection]->currentNumber == -1)
                             {
-                                // We've found a sink! Keep a reference to it
-                                gridStruct->lastCell = currentCell->neighbours[dir];
-                                // Time to walk back from it now
-                                gridStruct->currentRoutingState = STATE_LM_WALKBACK;
-                                // No more expansion, lets get out of here
+                                // Create a new list to keep our walkback cells in order for insertion into the last route list later
+                                tempCellList = new std::vector<cellStruct_t*>;
+                                // Quickly walk back
+                                for(i = gridStruct->currentExpansion; i > 0; i--)
+                                {
+                                    // For each cardinal direction
+                                    for(dir = DIR_NORTH; dir < DIR_NUM; dir++)
+                                    {
+                                        // Make sure we have a cell to look at
+                                        if(currentCell->neighbours[dir] == NULL)
+                                        {
+                                            continue;
+                                        }
+                                        // Check if the cell's number is one less than the current expansion
+                                        else if(currentCell->neighbours[dir]->currentNumber == i - 1)
+                                        {
+                                            // Take note of the last cell to route from (if it's not null, then we're walking back somewhere in the middle)
+                                            if(!gridStruct->lastCell)
+                                            {
+                                                gridStruct->lastCell = currentCell->neighbours[dir];
+                                            }
+                                            // Route the cell
+                                            currentCell->currentNet = gridStruct->currentNet;
+                                            currentCell->currentCellProp = CELL_NET_WIRE_CONN;
+                                            // Insert it to our temporary vector at the front to preserve ordering
+                                            (*tempCellList).insert((*tempCellList).begin(), currentCell);
+                                            // Go to the next cell
+                                            currentCell = currentCell->neighbours[dir];
+                                            break;
+                                        }
+                                    }
+                                }
+                                // Add the walkback to the current route
+                                gridStruct->lastRoute.insert(gridStruct->lastRoute.end(), (*tempCellList).begin(), (*tempCellList).end());
+                                // Go into our expansion list and revert their numbers to -1
+                                ResetCellExpansion(gridStruct);
+                                // Clear out the expansion list
+                                gridStruct->expansionList.clear();
+                                // Go back to expansion of 0
+                                gridStruct->currentExpansion = 0;
+                                // Reset the last cell
+                                gridStruct->lastCell = NULL;
+
+                                // We can seek again!
                                 doneExpansion = true;
+                                gridStruct->currentRoutingState = STATE_LP_SEEK;
+
                                 break;
                             }
                             // Check if the cell is routeable (it's empty and isn't part of a routing layer
@@ -531,115 +751,14 @@ void LeeMooreExec(parsedInputStruct_t *parsedInputStruct, gridStruct_t *gridStru
                     gridStruct->currentExpansion++;
                 }
                 break;
-            case STATE_LM_WALKBACK:
-                doneWalkback = false;
-                // Walkback state for current net
-                sprintf(strBuff, "Currently walking back net: %d layer: %d", gridStruct->currentNet, gridStruct->currentExpansion);
-                update_message(strBuff);
-
-                // At this point we have found a sink to connect to, now we need to walk back
-                // The lastcell pointer will have the last cell to walk back from
-
-                // Get a pointer to the last cell
-                currentCell = gridStruct->lastCell;
-                printf("Walking back net %d, current cell is %d, %d\n", gridStruct->currentNet, currentCell->coord.posX, currentCell->coord.posY);
-
-                // Add the cell to our last route list
-                gridStruct->lastRoute.push_back(currentCell);
-
-                // For each cardinal direction
-                for(dir = DIR_NORTH; dir < DIR_NUM; dir++)
-                {
-                    // Make sure we have a cell to look at
-                    if(currentCell->neighbours[dir] == NULL)
-                    {
-                        continue;
-                    }
-                    // Check if we've found our original net
-                    else if(currentCell->neighbours[dir]->currentNet == gridStruct->currentNet && !(currentCell->neighbours[dir]->currentCellProp == CELL_NET_SINK_UNCONN || currentCell->neighbours[dir]->currentCellProp == CELL_NET_WIRE_UNCONN))
-                    {
-                        // Found our net!
-                        printf("Found our net!\n");
-                        // Also add it to our last route
-                        gridStruct->lastRoute.push_back(currentCell->neighbours[dir]);
-                        // Time to cleanup
-                        // Go into our last route, and change unconnected sinks and wires to connected
-                        for(i = 0; i < gridStruct->lastRoute.size(); i++)
-                        {
-                            switch(gridStruct->lastRoute[i]->currentCellProp)
-                            {
-                                case CELL_NET_SINK_UNCONN:
-                                    gridStruct->lastRoute[i]->currentCellProp = CELL_NET_SINK_CONN;
-                                    break;
-                                case CELL_NET_WIRE_UNCONN:
-                                    gridStruct->lastRoute[i]->currentCellProp = CELL_NET_WIRE_CONN;
-                                    break;
-                                default:
-                                    break;
-                            }
-                        }
-                        // Go into our expansion list and revert their numbers to -1
-                        ResetCellExpansion(gridStruct);
-                        // Clear out the expansion list
-                        gridStruct->expansionList.clear();
-                        // Go back to expansion of 0
-                        gridStruct->currentExpansion = 0;
-                        // Done our walkback
-                        doneWalkback = true;
-                        // Decrement our nodes to route
-                        gridStruct->netRoutedNodes[gridStruct->currentNet]--;
-                        // If we have nodes left to route, go back to expansion
-                        if(gridStruct->netRoutedNodes[gridStruct->currentNet])
-                        {
-                            gridStruct->currentRoutingState = STATE_LM_EXPANSION;
-                        }
-                        // Otherwise we are done with this net
-                        else
-                        {
-                            // Update the screen
-                            DrawScreen();
-                            // Clear the last route
-                            gridStruct->lastRoute.clear();
-                            gridStruct->currentNet++;
-                            // Check if this was our last net
-                            if(gridStruct->currentNet == parsedInputStruct->nodes.size())
-                            {
-                                // If so, we're done!
-                                gridStruct->currentRoutingState = STATE_LM_ROUTE_SUCCESS;
-                            }
-                            else
-                            {
-                                // More nets to route...
-                                gridStruct->currentRoutingState = STATE_LM_EXPANSION;
-                            }
-                        }
-                        break;
-                    }
-                    // Check if the cell's number is one less than the current expansion
-                    else if(currentCell->neighbours[dir]->currentNumber == gridStruct->currentExpansion - 1)
-                    {
-                        // We've found a route back!
-                        // Take note of our cell
-                        gridStruct->lastCell = currentCell->neighbours[dir];
-                        // Route the cell
-                        currentCell->neighbours[dir]->currentNet = gridStruct->currentNet;
-                        currentCell->neighbours[dir]->currentCellProp = CELL_NET_WIRE_UNCONN;
-                        // Go back an expansion
-                        gridStruct->currentExpansion--;
-                        // We're done, go to next walkback cell
-                        break;
-                    }
-                }
-
-                break;
-            case STATE_LM_ROUTE_FAILURE:
+            case STATE_LP_ROUTE_FAILURE:
                 // We failed the last route, don't keep routing :(
                 sprintf(strBuff, "Route failed on net %d!", gridStruct->currentNet);
                 update_message(strBuff);
                 printf("Route failed!\n");
                 keepRouting = false;
                 break;
-            case STATE_LM_ROUTE_SUCCESS:
+            case STATE_LP_ROUTE_SUCCESS:
                 // We've successfully routed! Yay!
                 sprintf(strBuff, "Route SUCCESS after trying %d time(s)", gridStruct->currentRetries + 1);
                 update_message(strBuff);
@@ -650,7 +769,7 @@ void LeeMooreExec(parsedInputStruct_t *parsedInputStruct, gridStruct_t *gridStru
                 break;
         }
         // If we're routing an entire net and we're still on the same name net, keep going if we have failed/succeeded yet
-        if(!(gridStruct->currentRoutingState == STATE_LM_ROUTE_FAILURE || gridStruct->currentRoutingState == STATE_LM_ROUTE_SUCCESS))
+        if(!(gridStruct->currentRoutingState == STATE_LP_ROUTE_FAILURE || gridStruct->currentRoutingState == STATE_LP_ROUTE_SUCCESS))
         {
             switch(stepType)
             {
@@ -677,11 +796,11 @@ void LeeMooreExec(parsedInputStruct_t *parsedInputStruct, gridStruct_t *gridStru
             }
         }
         // If we've failed but we have more retries, rip up routed nets and try again
-        else if(gridStruct->currentRoutingState == STATE_LM_ROUTE_FAILURE && gridStruct->currentRetries < MAXIMUM_ROUTING_RETRIES)
+        else if(gridStruct->currentRoutingState == STATE_LP_ROUTE_FAILURE && gridStruct->currentRetries < MAXIMUM_ROUTING_RETRIES)
         {
             keepRouting = true;
             gridStruct->currentRetries++;
-            LeeMooreInit(parsedInputStruct, gridStruct);
+            LineProbeInit(parsedInputStruct, gridStruct);
         }
     }
     while(keepRouting);
@@ -698,6 +817,34 @@ void ResetCellExpansion(gridStruct_t *gridStruct)
             gridStruct->expansionList[i][j]->currentNumber = -1;
         }
     }
+}
+
+void GetDirection(cellStruct_t *cell0, cellStruct_t *cell1, gridStruct_t *gridStruct)
+{
+    // Find up/down
+    if(cell0->coord.posY < cell1->coord.posY)
+    {
+        gridStruct->nextNodeDir[DIR_IDX_NS_Y] = DIR_SOUTH;
+    }
+    else
+    {
+        gridStruct->nextNodeDir[DIR_IDX_NS_Y] = DIR_NORTH;
+    }
+    // Find left/right
+    if(cell0->coord.posX < cell1->coord.posX)
+    {
+        gridStruct->nextNodeDir[DIR_IDX_EW_X] = DIR_EAST;
+    }
+    else
+    {
+        gridStruct->nextNodeDir[DIR_IDX_EW_X] = DIR_WEST;
+    }
+}
+
+void GetDistanceDelta(cellStruct_t *cell0, cellStruct_t *cell1, unsigned int * distanceDelta)
+{
+    distanceDelta[DIR_IDX_EW_X] = abs((int)cell0->coord.posX - (int)(cell1->coord.posX));
+    distanceDelta[DIR_IDX_NS_Y] = abs((int)cell0->coord.posY - (int)(cell1->coord.posY));
 }
 
 void ActOnButtonPress(float x, float y)
@@ -725,19 +872,19 @@ void ActOnKeyPress(char c)
         case 'R':
             printf("Resetting grid! \n");
             // Initialize Lee Moore algorithm
-            LeeMooreInit(input, grid);
+            LineProbeInit(input, grid);
             break;
         case 'N':
             printf("Taking a single step...\n");
-            LeeMooreExec(input, grid, STEP_SINGLE);
+            LineProbeExec(input, grid, STEP_SINGLE);
             break;
         case 'M':
             printf("Attempting to route a single net...\n");
-            LeeMooreExec(input, grid, STEP_NET);
+            LineProbeExec(input, grid, STEP_NET);
             break;
         case 'A':
             printf("Attempting to route the entire grid...\n");
-            LeeMooreExec(input, grid, STEP_COMPLETE);
+            LineProbeExec(input, grid, STEP_COMPLETE);
         default:
             break;
     }
