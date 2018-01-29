@@ -12,7 +12,7 @@
 #define MAX_NET_COLORS          8
 
 // Constants used in the algorithm
-#define MAXIMUM_ROUTING_RETRIES 50
+#define MAXIMUM_ROUTING_RETRIES 200
 
 // This enum contains the Lee Moore routing algorithm's state
 typedef enum

@@ -27,8 +27,8 @@ color_types netColors[MAX_NET_COLORS] =
 int main(int argc, char **argv)
 {
     std::string line;
-    //char * filename = argv[1];
-    const char * filename = "..\\benchmarks\\stdcell.infile";
+    char * filename = argv[1];
+    //const char * filename = "..\\benchmarks\\wavy.infile";
 
     // Filename to read in is the second argument
     std::ifstream myfile(filename, std::ios::in);
@@ -348,23 +348,6 @@ void DrawScreen(void)
             DrawCell(&grid->cells[i][j]);
         }
     }
-
-    //currentXOrigin = (float)(gridMarginX + cell->coord.posX * cellSizeX);
-    //currentYOrigin = (float)(gridMarginY + cell->coord.posY * cellSizeY);
-
-    //// Draw indices
-    //for(i = 0; i < grid->gridSizeX; i++)
-    //{
-    //    setcolor(WHITE);
-    //    setfontsize(10);
-    //    drawtext(currentXOrigin + 0.5f*cellSizeX, gridMarginY -, "SRC", 800.);
-    //}
-    //for(j = 0; j < grid->gridSizeY; j++)
-    //{
-    //    setcolor(WHITE);
-    //    setfontsize(10);
-    //    drawtext(currentXOrigin + 0.5f*cellSizeX, currentYOrigin + 0.5f*cellSizeY, "SRC", 800.);
-    //}
 }
 
 void LineProbeInit(parsedInputStruct_t *parsedInputStruct, gridStruct_t *gridStruct)
@@ -410,11 +393,10 @@ void LineProbeExec(parsedInputStruct_t *parsedInputStruct, gridStruct_t *gridStr
     char strBuff[80];
 
     bool doneExpansion;
-    bool doneWalkback;
     bool doneSeek;
     bool keepRouting;
 
-    unsigned int x0, y0, x1, y1, i, dir, currentNet;
+    unsigned int x0, y0, i, dir, currentNet;
     unsigned int distanceDelta[2];
     unsigned int smallestDistance;
     unsigned int currentDistance;
@@ -676,9 +658,16 @@ void LineProbeExec(parsedInputStruct_t *parsedInputStruct, gridStruct_t *gridStr
                             {
                                 continue;
                             }
-                            // Check if the cell is routeable in the direction we want (this is what we are primarily looking for)
-                            else if(currentCell->neighbours[currentDirection]->currentCellProp == CELL_EMPTY && currentCell->neighbours[currentDirection]->currentNumber == -1)
+                            // Check if the cell is routeable in the direction we want (this is what we are primarily looking for) OR
+                            // Check if the cell is an unconnected node (perhaps not the one we wanted in the first place)
+                            else if((currentCell->neighbours[currentDirection]->currentCellProp == CELL_EMPTY && currentCell->neighbours[currentDirection]->currentNumber == -1) || 
+                                (currentCell->neighbours[currentDirection]->currentCellProp == CELL_NET_NODE_UNCONN && currentCell->neighbours[currentDirection]->currentNet == gridStruct->currentNet))
                             {
+                                // Connect the unconnected node
+                                if(currentCell->neighbours[currentDirection]->currentCellProp == CELL_NET_NODE_UNCONN)
+                                {
+                                    currentCell->neighbours[currentDirection]->currentCellProp = CELL_NET_NODE_CONN;
+                                }
                                 // Create a new list to keep our walkback cells in order for insertion into the last route list later
                                 tempCellList = new std::vector<cellStruct_t*>;
                                 // Quickly walk back
@@ -871,8 +860,10 @@ void ActOnKeyPress(char c)
     {
         case 'R':
             printf("Resetting grid! \n");
-            // Initialize Lee Moore algorithm
+            // Initialize Line Probe algorithm
             LineProbeInit(input, grid);
+            // Reset retry counter
+            grid->currentRetries = 0;
             break;
         case 'N':
             printf("Taking a single step...\n");
