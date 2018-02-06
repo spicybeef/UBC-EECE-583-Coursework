@@ -26,7 +26,6 @@ color_types netColors[MAX_NET_COLORS] =
 
 int main(int argc, char **argv)
 {
-    std::string line;
     char * filename = argv[1];
     //const char * filename = "..\\benchmarks\\kuma.infile";
 
