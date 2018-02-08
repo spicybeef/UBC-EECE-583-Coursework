@@ -22,6 +22,29 @@ int main(int argc, char **argv)
         static_cast<unsigned int>(WIN_VIEWPORT_HEIGHT));
     std::vector<sf::RectangleShape> grid;
 
+    // Background
+    sf::RectangleShape background(sf::Vector2f(WIN_GRAPHICPORT_WIDTH, WIN_GRAPHICPORT_HEIGHT));
+    background.setPosition(sf::Vector2f(0.f, 0.f));
+    background.setFillColor(sf::Color(50, 50, 50, 255));
+
+    // Log
+    sf::Font font;
+    sf::Text text;
+    font.loadFromFile("C:\\Windows\\Fonts\\consola.ttf");
+    text.setFont(font);
+    text.setString("S******************************************************************************E");
+    text.setCharacterSize(17);
+    text.setFillColor(sf::Color::Green);
+    text.setStyle(sf::Text::Regular);
+    text.setPosition(sf::Vector2f(0.f + WIN_INFOPORT_PADDING, WIN_VIEWPORT_HEIGHT - WIN_INFOPORT_HEIGHT + WIN_INFOPORT_PADDING));
+
+    // Separator
+    sf::Vertex line[] =
+    {
+        sf::Vertex(sf::Vector2f(0.f, WIN_VIEWPORT_HEIGHT - WIN_INFOPORT_HEIGHT)),
+        sf::Vertex(sf::Vector2f(WIN_VIEWPORT_WIDTH, WIN_VIEWPORT_HEIGHT - WIN_INFOPORT_HEIGHT))
+    };
+
     // Filename to read in is the second argument
     std::ifstream myfile(filename, std::ios::in);
 
@@ -40,11 +63,11 @@ int main(int argc, char **argv)
     parseInputFile(&myfile, input);
 
     // Create our render window object
-    // Give it a default type (titlebar, close button, resizeable)
+    // Give it a default type (titlebar, close button)
     sf::RenderWindow window(sf::VideoMode(
         static_cast<unsigned int>(WIN_VIEWPORT_WIDTH),
         static_cast<unsigned int>(WIN_VIEWPORT_HEIGHT)),
-        "Simulated Annealing Placer", sf::Style::Default);
+        "Simulated Annealing Placer", sf::Style::Titlebar | sf::Style::Close);
     window.setView(calcView(window.getSize(), viewportSize));
 
     // Get a grid
@@ -62,7 +85,15 @@ int main(int argc, char **argv)
         }
         window.clear();
 
-        // Draw UI
+        // Draw background
+        window.draw(background);
+
+        // Draw infoport
+        window.draw(text);
+
+        // Draw separator
+        window.draw(line, 2, sf::Lines);
+
         // Draw grid
         for(i = 0; i < grid.size(); i++)
         {
@@ -137,16 +168,16 @@ bool parseInputFile(std::ifstream *inputFile, parsedInputStruct_t *inputStruct)
         stringVec = splitString(line, ' ');
         // Get number of nodes for this net
         numNodes = stoi(stringVec[0]);
-        printf("Connection %d: %d nodes:\n\t", i, numNodes);
+        //printf("Connection %d: %d nodes:\n\t", i, numNodes);
         // Now get all nodes for this net
         // Push back a new vector for this
         inputStruct->nets.push_back(std::vector<unsigned int>());
         for(j = 0; j < numNodes; j++)
         {
             inputStruct->nets[i].push_back(stoi(stringVec[j + 1]));
-            printf("%d ", inputStruct->nets[i][j]);
+            //printf("%d ", inputStruct->nets[i][j]);
         }
-        printf("\n");
+        //printf("\n");
     }
 
 

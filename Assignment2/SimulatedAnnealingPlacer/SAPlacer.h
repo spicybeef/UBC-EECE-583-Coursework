@@ -10,8 +10,9 @@
 #define WIN_INFOPORT_HEIGHT                     100.f
 #define WIN_GRAPHICPORT_WIDTH                   WIN_VIEWPORT_WIDTH
 #define WIN_GRAPHICPORT_HEIGHT                  (WIN_VIEWPORT_HEIGHT - WIN_INFOPORT_HEIGHT)
+#define WIN_INFOPORT_PADDING                    10.f
 // Grid constants
-#define GRID_SHRINK_FACTOR                      0.8f
+#define GRID_SHRINK_FACTOR                      0.6f
 
 typedef struct
 {
