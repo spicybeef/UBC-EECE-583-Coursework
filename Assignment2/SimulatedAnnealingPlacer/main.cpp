@@ -21,6 +21,7 @@ int main(int argc, char **argv)
         static_cast<unsigned int>(WIN_VIEWPORT_WIDTH),
         static_cast<unsigned int>(WIN_VIEWPORT_HEIGHT));
     std::vector<sf::RectangleShape> grid;
+    std::vector<sf::Vertex> netLines;
 
     // Background
     sf::RectangleShape background(sf::Vector2f(WIN_GRAPHICPORT_WIDTH, WIN_GRAPHICPORT_HEIGHT));
@@ -61,6 +62,12 @@ int main(int argc, char **argv)
 
     // Parse input file
     parseInputFile(&myfile, input);
+    // Get a grid
+    grid = generateGrid(input, placer);
+    // Generate cell connections
+    generateCellConnections(input, placer);
+    // Get net lines
+    netLines = generateNetLines(placer);
 
     // Create our render window object
     // Give it a default type (titlebar, close button)
@@ -69,9 +76,6 @@ int main(int argc, char **argv)
         static_cast<unsigned int>(WIN_VIEWPORT_HEIGHT)),
         "Simulated Annealing Placer", sf::Style::Titlebar | sf::Style::Close);
     window.setView(calcView(window.getSize(), viewportSize));
-
-    // Get a grid
-    grid = generateGrid(input);
 
     while(window.isOpen())
     {
@@ -99,6 +103,11 @@ int main(int argc, char **argv)
         {
             window.draw(grid[i]);
         }
+
+        // Draw net lines
+        window.draw(&netLines.front(), netLines.size(), sf::Lines);
+
+        // Display window
         window.display();
     }
 
@@ -184,7 +193,89 @@ bool parseInputFile(std::ifstream *inputFile, parsedInputStruct_t *inputStruct)
     return true;
 }
 
-std::vector<sf::RectangleShape> generateGrid(parsedInputStruct_t *input)
+// random generator function:
+int myRandomInt(int i)
+{
+    return std::rand() % i;
+}
+
+void generateCellConnections(parsedInputStruct_t *inputStruct, placerStruct_t *placerStruct)
+{
+    unsigned int i, j, row, col;
+    cellStruct_t *cellPointer;
+
+    // Generate the grid
+    for(i = 0; i < inputStruct->numCols; i++)
+    {
+        placerStruct->grid.push_back(std::vector<cellStruct_t*>());
+        for(j = 0; j < inputStruct->numRows; j++)
+        {
+            placerStruct->grid[i].push_back(NULL);
+        }
+    }
+
+    // Push back enough cells for the nets
+    for(i = 0; i < inputStruct->numCells; i++)
+    {
+        placerStruct->cells.push_back(cellStruct_t());
+        placerStruct->cells.back().id = i;
+        // Put it somewhere randomly on the grid (make sure it's empty)
+        do
+        {
+            col = static_cast<unsigned int>(myRandomInt(inputStruct->numCols));
+            row = static_cast<unsigned int>(myRandomInt(inputStruct->numRows));
+        }
+        while(placerStruct->grid[col][row] != NULL);
+        // TODO: this is ridiculous, make this a class and have a method return these
+        placerStruct->cells.back().pos.col = col;
+        placerStruct->cells.back().pos.row = row;
+        if(placerStruct->maximizedDim == DIM_VERTICAL)
+        {
+            placerStruct->cells.back().drawPos.x = col * placerStruct->cellSize + placerStruct->cellOppositeOffset;
+            placerStruct->cells.back().drawPos.y = row * placerStruct->cellSize + placerStruct->cellOffset;
+        }
+        else
+        {
+            placerStruct->cells.back().drawPos.x = col * placerStruct->cellSize + placerStruct->cellOffset;
+            placerStruct->cells.back().drawPos.y = row * placerStruct->cellSize + placerStruct->cellOppositeOffset;
+        }
+        
+        placerStruct->grid[col][row] = &placerStruct->cells.back();
+    }
+
+    // Now cells are indexed in the cell vector
+    // Connect them via their nets
+    for(i = 0; i < inputStruct->nets.size(); i++)
+    {
+        placerStruct->nets.push_back(netStruct_t());
+        for(j = 0; j < inputStruct->nets[i].size(); j++)
+        {
+            cellPointer = &placerStruct->cells[inputStruct->nets[i][j]];
+            placerStruct->nets.back().connections.push_back(cellPointer);
+        }
+    }
+}
+
+std::vector<sf::Vertex> generateNetLines(placerStruct_t *placerStruct)
+{
+    unsigned int i, j;
+    std::vector<sf::Vertex> netLines;
+    cellStruct_t *cellPointer[2];
+
+    for(i = 0; i < placerStruct->nets.size(); i++)
+    {
+        for(j = 0; j < placerStruct->nets[i].connections.size() - 1; j++)
+        {
+            cellPointer[0] = placerStruct->nets[i].connections[j];
+            cellPointer[1] = placerStruct->nets[i].connections[j + 1];
+            netLines.push_back(sf::Vertex(sf::Vector2f(cellPointer[0]->drawPos.x, cellPointer[1]->drawPos.y), sf::Color::Blue));
+        }
+    }
+
+    return netLines;
+}
+
+std::vector<sf::RectangleShape> generateGrid(parsedInputStruct_t *inputStruct, placerStruct_t *placerStruct)
 {
     std::vector<sf::RectangleShape> grid;
     unsigned int i, j;
@@ -194,10 +285,18 @@ std::vector<sf::RectangleShape> generateGrid(parsedInputStruct_t *input)
     rowToColRatio = static_cast<float>(input->numRows)/static_cast<float>(input->numCols);
     graphicportRatio = WIN_GRAPHICPORT_HEIGHT / WIN_GRAPHICPORT_WIDTH;
     
-    printf("%f %f %f\n", WIN_GRAPHICPORT_HEIGHT, WIN_GRAPHICPORT_WIDTH, graphicportRatio);
+    // Determine which dimension gets maximized
+    if(rowToColRatio > graphicportRatio)
+    {
+        placerStruct->maximizedDim = DIM_VERTICAL;
+    }
+    else
+    {
+        placerStruct->maximizedDim = DIM_HORIZONTAL;
+    }
 
     // Check which orientation gets maximized
-    if(rowToColRatio > graphicportRatio)
+    if(placerStruct->maximizedDim == DIM_VERTICAL)
     {
         // Use rows to fill vertically
         cellSize = WIN_GRAPHICPORT_HEIGHT / static_cast<float>(input->numRows);
@@ -214,13 +313,18 @@ std::vector<sf::RectangleShape> generateGrid(parsedInputStruct_t *input)
         cellOppositeOffset = cellOffset + (WIN_GRAPHICPORT_HEIGHT - static_cast<float>(input->numRows) * cellSize) / 2.f;
     }
 
+    // Save these for use later
+    placerStruct->cellSize = cellSize;
+    placerStruct->cellOffset = cellOffset;
+    placerStruct->cellOppositeOffset = cellOppositeOffset;
+
     // Populate the grid vector with the data obtained above
     for(i = 0; i < input->numCols; i++)
     {
         for(j = 0; j < input->numRows; j++)
         {
             grid.push_back(sf::RectangleShape());
-            if(rowToColRatio > WIN_GRAPHICPORT_HEIGHT / WIN_GRAPHICPORT_WIDTH)
+            if(placerStruct->maximizedDim == DIM_VERTICAL)
             {
                 grid.back().setPosition(
                     static_cast<float>((i*cellSize) + cellOppositeOffset),
