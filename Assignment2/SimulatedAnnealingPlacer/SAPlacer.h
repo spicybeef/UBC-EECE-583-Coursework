@@ -1,5 +1,18 @@
 #pragma once
 
+#include <vector>
+
+// Program defaults
+// Graphics constants
+#define WIN_VIEWPORT_WIDTH                      800.f
+#define WIN_VIEWPORT_HEIGHT                     600.f
+#define WIN_INFOPORT_WIDTH                      WIN_VIEWPORT_WIDTH
+#define WIN_INFOPORT_HEIGHT                     100.f
+#define WIN_GRAPHICPORT_WIDTH                   WIN_VIEWPORT_WIDTH
+#define WIN_GRAPHICPORT_HEIGHT                  (WIN_VIEWPORT_HEIGHT - WIN_INFOPORT_HEIGHT)
+// Grid constants
+#define GRID_SHRINK_FACTOR                      0.8f
+
 typedef struct
 {
     unsigned int                                row;            ///< Cell row
@@ -40,4 +53,8 @@ typedef struct
 
 } placerStruct_t;
 
-bool ParseInputFile(std::ifstream *inputFile, parsedInputStruct_t *inputStruct);
+// Helpers
+bool parseInputFile(std::ifstream *inputFile, parsedInputStruct_t *inputStruct);
+sf::View calcView(const sf::Vector2u &windowsize, const sf::Vector2u &designedsize);
+std::vector<sf::RectangleShape> generateGrid(parsedInputStruct_t *input);
+std::vector<std::string> splitString(std::string inString, char delimiter);
