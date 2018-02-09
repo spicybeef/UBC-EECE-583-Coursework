@@ -65,7 +65,7 @@ int main(int argc, char **argv)
     // Get a grid
     grid = generateGrid(input, placer);
     // Generate cell connections
-    generateCellConnections(input, placer);
+    placeCells(input, placer);
     // Get net lines
     netLines = generateNetLines(placer);
 
@@ -78,7 +78,7 @@ int main(int argc, char **argv)
     window.setView(calcView(window.getSize(), viewportSize));
 
     while(window.isOpen())
-    {
+    { 
         sf::Event event;
         while(window.pollEvent(event))
         {
@@ -87,6 +87,12 @@ int main(int argc, char **argv)
             if(event.type == sf::Event::Resized)
                 window.setView(calcView(sf::Vector2u(event.size.width, event.size.height), viewportSize));
         }
+
+        // Place cells
+        placeCells(input, placer);
+        // Get net lines
+        netLines = generateNetLines(placer);
+
         window.clear();
 
         // Draw background
@@ -201,8 +207,27 @@ int myRandomInt(int i)
 
 void generateCellConnections(parsedInputStruct_t *inputStruct, placerStruct_t *placerStruct)
 {
-    unsigned int i, j, row, col;
+    unsigned int i, j;
     cellStruct_t *cellPointer;
+
+    placerStruct->nets.clear();
+
+    for(i = 0; i < inputStruct->nets.size(); i++)
+    {
+        placerStruct->nets.push_back(netStruct_t());
+        for(j = 0; j < inputStruct->nets[i].size(); j++)
+        {
+            cellPointer = &placerStruct->cells[inputStruct->nets[i][j]];
+            placerStruct->nets.back().connections.push_back(cellPointer);
+        }
+    }
+}
+
+void generateGridModel(parsedInputStruct_t *inputStruct, placerStruct_t *placerStruct)
+{
+    unsigned int i, j;
+
+    placerStruct->grid.clear();
 
     // Generate the grid
     for(i = 0; i < inputStruct->numCols; i++)
@@ -213,8 +238,14 @@ void generateCellConnections(parsedInputStruct_t *inputStruct, placerStruct_t *p
             placerStruct->grid[i].push_back(NULL);
         }
     }
+}
 
-    // Push back enough cells for the nets
+void generateCells(parsedInputStruct_t *inputStruct, placerStruct_t *placerStruct)
+{
+    unsigned int i, row, col;
+
+    placerStruct->cells.clear();
+
     for(i = 0; i < inputStruct->numCells; i++)
     {
         placerStruct->cells.push_back(cellStruct_t());
@@ -239,26 +270,27 @@ void generateCellConnections(parsedInputStruct_t *inputStruct, placerStruct_t *p
             placerStruct->cells.back().drawPos.x = col * placerStruct->cellSize + placerStruct->cellOffset;
             placerStruct->cells.back().drawPos.y = row * placerStruct->cellSize + placerStruct->cellOppositeOffset;
         }
-        
+
         placerStruct->grid[col][row] = &placerStruct->cells.back();
     }
+}
+
+void placeCells(parsedInputStruct_t *inputStruct, placerStruct_t *placerStruct)
+{
+    // Generate the grid
+    generateGridModel(inputStruct, placerStruct);
+
+    // Push back enough cells for the nets
+    generateCells(inputStruct, placerStruct);
 
     // Now cells are indexed in the cell vector
     // Connect them via their nets
-    for(i = 0; i < inputStruct->nets.size(); i++)
-    {
-        placerStruct->nets.push_back(netStruct_t());
-        for(j = 0; j < inputStruct->nets[i].size(); j++)
-        {
-            cellPointer = &placerStruct->cells[inputStruct->nets[i][j]];
-            placerStruct->nets.back().connections.push_back(cellPointer);
-        }
-    }
+    generateCellConnections(inputStruct, placerStruct);
 }
 
 std::vector<sf::Vertex> generateNetLines(placerStruct_t *placerStruct)
 {
-    unsigned int i, j;
+    unsigned int i, j, red, green, blue;
     std::vector<sf::Vertex> netLines;
     cellStruct_t *cellPointer[2];
 
@@ -268,6 +300,9 @@ std::vector<sf::Vertex> generateNetLines(placerStruct_t *placerStruct)
         {
             cellPointer[0] = placerStruct->nets[i].connections[j];
             cellPointer[1] = placerStruct->nets[i].connections[j + 1];
+            //red = myRandomInt(256);
+            //green = myRandomInt(256);
+            //blue = myRandomInt(256);
             netLines.push_back(sf::Vertex(sf::Vector2f(cellPointer[0]->drawPos.x, cellPointer[1]->drawPos.y), sf::Color::Blue));
         }
     }

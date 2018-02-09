@@ -4,15 +4,15 @@
 
 // Program defaults
 // Graphics constants
-#define WIN_VIEWPORT_WIDTH                      800.f
-#define WIN_VIEWPORT_HEIGHT                     600.f
+#define WIN_VIEWPORT_WIDTH                      1000.f
+#define WIN_VIEWPORT_HEIGHT                     800.f
 #define WIN_INFOPORT_WIDTH                      WIN_VIEWPORT_WIDTH
 #define WIN_INFOPORT_HEIGHT                     100.f
 #define WIN_GRAPHICPORT_WIDTH                   WIN_VIEWPORT_WIDTH
 #define WIN_GRAPHICPORT_HEIGHT                  (WIN_VIEWPORT_HEIGHT - WIN_INFOPORT_HEIGHT)
 #define WIN_INFOPORT_PADDING                    10.f
 // Grid constants
-#define GRID_SHRINK_FACTOR                      0.6f
+#define GRID_SHRINK_FACTOR                      0.8f
 
 typedef enum
 {
@@ -77,6 +77,8 @@ typedef struct
 bool parseInputFile(std::ifstream *inputFile, parsedInputStruct_t *inputStruct);
 int myRandomInt(int i);
 void generateCellConnections(parsedInputStruct_t *inputStruct, placerStruct_t *placerStruct);
+void generateGridModel(parsedInputStruct_t *inputStruct, placerStruct_t *placerStruct);
+void placeCells(parsedInputStruct_t *inputStruct, placerStruct_t *placerStruct);
 sf::View calcView(const sf::Vector2u &windowsize, const sf::Vector2u &designedsize);
 std::vector<sf::Vertex> generateNetLines(placerStruct_t *placerStruct);
 std::vector<sf::RectangleShape> generateGrid(parsedInputStruct_t *inputStruct, placerStruct_t *placerStruct);
