@@ -72,7 +72,7 @@ int main(int argc, char **argv)
     backgroundGrid = generateGrid(input, placer);
 
 	// Push back enough cells for the nets
-	generateCells(input, placer);
+	generateCells(input->numCells, placer);
 	// Connect them via their nets
 	generateCellConnections(input, placer);
 
@@ -97,9 +97,9 @@ int main(int argc, char **argv)
         }
 
 		// Generate the grid model
-		generateGridModel(input, placer);
+		generateGridModel(input->numCols, input->numRows, placer);
 		// Place the cells at random
-		generateCellPlacement(input, placer);
+		generateCellPlacement(input->numCols, input->numRows, placer);
         // Get net lines
         netLines = generateNetLines(placer);
 
@@ -271,31 +271,31 @@ void generateCellConnections(parsedInputStruct_t *inputStruct, placerStruct_t *p
     }
 }
 
-void generateGridModel(parsedInputStruct_t *inputStruct, placerStruct_t *placerStruct)
+void generateGridModel(unsigned int numCols, unsigned int numRows, placerStruct_t *placerStruct)
 {
     unsigned int i, j;
 
     placerStruct->grid.clear();
 
     // Generate the grid model
-    for(i = 0; i < inputStruct->numCols; i++)
+    for(i = 0; i < numCols; i++)
     {
         placerStruct->grid.push_back(std::vector<cellStruct_t*>());
-        for(j = 0; j < inputStruct->numRows; j++)
+        for(j = 0; j < numRows; j++)
         {
             placerStruct->grid[i].push_back(NULL);
         }
     }
 }
 
-void generateCells(parsedInputStruct_t *inputStruct, placerStruct_t *placerStruct)
+void generateCells(unsigned int numCells, placerStruct_t *placerStruct)
 {
 	unsigned int i;
 
     placerStruct->cells.clear();
 
 	// For each cell
-    for(i = 0; i < inputStruct->numCells; i++)
+    for(i = 0; i < numCells; i++)
     {
 		// Add a cell
         placerStruct->cells.push_back(cellStruct_t());
@@ -304,7 +304,7 @@ void generateCells(parsedInputStruct_t *inputStruct, placerStruct_t *placerStruc
     }
 }
 
-void generateCellPlacement(parsedInputStruct_t *inputStruct, placerStruct_t *placerStruct)
+void generateCellPlacement(unsigned int numCols, unsigned int numRows, placerStruct_t *placerStruct)
 {
 	unsigned int i, col, row;
 
@@ -313,8 +313,8 @@ void generateCellPlacement(parsedInputStruct_t *inputStruct, placerStruct_t *pla
 		// Put it somewhere randomly on the grid (make sure it's empty)
 		do
 		{
-			col = static_cast<unsigned int>(myRandomInt(inputStruct->numCols));
-			row = static_cast<unsigned int>(myRandomInt(inputStruct->numRows));
+			col = static_cast<unsigned int>(myRandomInt(numCols));
+			row = static_cast<unsigned int>(myRandomInt(numRows));
 		} while (placerStruct->grid[col][row] != NULL);
 
 		// Update the cell's position

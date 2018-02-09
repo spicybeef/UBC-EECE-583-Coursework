@@ -18,6 +18,9 @@
 // Grid constants
 #define GRID_SHRINK_FACTOR                      0.8f
 
+// typedef helpers to make things legible
+typedef std::vector<std::vector<unsigned int>>	netVec;
+
 typedef enum
 {
     DIM_HORIZONTAL = 0,
@@ -60,7 +63,7 @@ typedef struct
     unsigned int                                numCells;           ///< Number of cells to place
     unsigned int                                numConnections;     ///< The number of connections
 
-    std::vector<std::vector<unsigned int>>      nets;               ///< Parsed nets
+	netVec                                      nets;               ///< Parsed nets
 
 } parsedInputStruct_t;
 
@@ -83,9 +86,9 @@ int myRandomInt(int i);
 drawPosStruct_t getGridCellCoordinate(placerStruct_t *placerStruct, unsigned int col, unsigned int row);
 void updateCellPosition(placerStruct_t *placerStruct, cellStruct_t *cell, unsigned int col, unsigned int row);
 void generateCellConnections(parsedInputStruct_t *inputStruct, placerStruct_t *placerStruct);
-void generateGridModel(parsedInputStruct_t *inputStruct, placerStruct_t *placerStruct);
-void generateCells(parsedInputStruct_t *inputStruct, placerStruct_t *placerStruct);
-void generateCellPlacement(parsedInputStruct_t *inputStruct, placerStruct_t *placerStruct);
+void generateGridModel(unsigned int numCols, unsigned int numRows, placerStruct_t *placerStruct);
+void generateCells(unsigned int numCells, placerStruct_t *placerStruct);
+void generateCellPlacement(unsigned int numCols, unsigned int numRows, placerStruct_t *placerStruct);
 sf::View calcView(const sf::Vector2u &windowsize, const sf::Vector2u &designedsize);
 std::vector<sf::Vertex> generateNetLines(placerStruct_t *placerStruct);
 std::vector<sf::RectangleShape> generateGrid(parsedInputStruct_t *inputStruct, placerStruct_t *placerStruct);
