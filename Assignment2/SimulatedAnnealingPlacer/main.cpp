@@ -17,18 +17,21 @@ placerStruct_t *placer = new placerStruct_t();
 int main(int argc, char **argv)
 {
     unsigned int i;
+	// File handling
     //char * filename = argv[1];
-    const char * filename = "..\\benchmarks\\cm162a.txt";
+    const char * filename = "..\\benchmarks\\apex4.txt";
+	// Viewport size
     const sf::Vector2u viewportSize(
         static_cast<unsigned int>(WIN_VIEWPORT_WIDTH),
         static_cast<unsigned int>(WIN_VIEWPORT_HEIGHT));
-    std::vector<sf::RectangleShape> grid;
+	// Drawing components
+    std::vector<sf::RectangleShape> backgroundGrid;
     std::vector<sf::Vertex> netLines;
 
     // Background
     sf::RectangleShape background(sf::Vector2f(WIN_GRAPHICPORT_WIDTH, WIN_GRAPHICPORT_HEIGHT));
     background.setPosition(sf::Vector2f(0.f, 0.f));
-    background.setFillColor(sf::Color(50, 50, 50, 255));
+    background.setFillColor(sf::Color(200, 200, 200, 255));
 
     // Log
     sf::Font font;
@@ -65,20 +68,13 @@ int main(int argc, char **argv)
     // Parse input file
     parseInputFile(&myfile, input);
 
-    // Get a grid
-    grid = generateGrid(input, placer);
+    // Get a grid, only need to do this once since it is static
+    backgroundGrid = generateGrid(input, placer);
 
-	// Generate the grid model
-	generateGridModel(input, placer);
 	// Push back enough cells for the nets
 	generateCells(input, placer);
-	// Place the cells at random
-	generateCellPlacement(input, placer);
 	// Connect them via their nets
 	generateCellConnections(input, placer);
-
-    // Get net lines
-    netLines = generateNetLines(placer);
 
     // Create our render window object
     // Give it a default type (titlebar, close button)
@@ -88,6 +84,7 @@ int main(int argc, char **argv)
         "Simulated Annealing Placer", sf::Style::Titlebar | sf::Style::Close);
     window.setView(calcView(window.getSize(), viewportSize));
 
+	// Draw stuff
     while(window.isOpen())
     { 
         sf::Event event;
@@ -99,24 +96,25 @@ int main(int argc, char **argv)
                 window.setView(calcView(sf::Vector2u(event.size.width, event.size.height), viewportSize));
         }
 
+		// Generate the grid model
+		generateGridModel(input, placer);
+		// Place the cells at random
+		generateCellPlacement(input, placer);
         // Get net lines
         netLines = generateNetLines(placer);
 
+		// Clear window
         window.clear();
-
         // Draw background
         window.draw(background);
-
         // Draw infoport
         window.draw(text);
-
         // Draw separator
         window.draw(line, 2, sf::Lines);
-
         // Draw grid
-        for(i = 0; i < grid.size(); i++)
+        for(i = 0; i < backgroundGrid.size(); i++)
         {
-            window.draw(grid[i]);
+            window.draw(backgroundGrid[i]);
         }
 
         // Draw net lines
@@ -338,7 +336,8 @@ std::vector<sf::Vertex> generateNetLines(placerStruct_t *placerStruct)
         {
             cellPointer[0] = placerStruct->nets[i].connections[j];
             cellPointer[1] = placerStruct->nets[i].connections[j + 1];
-            netLines.push_back(sf::Vertex(sf::Vector2f(cellPointer[0]->drawPos.x, cellPointer[1]->drawPos.y), color));
+            netLines.push_back(sf::Vertex(sf::Vector2f(cellPointer[0]->drawPos.x, cellPointer[0]->drawPos.y), color));
+			netLines.push_back(sf::Vertex(sf::Vector2f(cellPointer[1]->drawPos.x, cellPointer[1]->drawPos.y), color));
         }
     }
 
