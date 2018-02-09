@@ -4,8 +4,10 @@
 #include <sstream>
 #include <string>
 #include <vector>
+
 // SFML Includes
 #include <SFML/Graphics.hpp>
+
 // Program Includes
 #include "SAPlacer.h"
 
@@ -16,7 +18,7 @@ int main(int argc, char **argv)
 {
     unsigned int i;
     //char * filename = argv[1];
-    const char * filename = "..\\benchmarks\\apex4.txt";
+    const char * filename = "..\\benchmarks\\cm162a.txt";
     const sf::Vector2u viewportSize(
         static_cast<unsigned int>(WIN_VIEWPORT_WIDTH),
         static_cast<unsigned int>(WIN_VIEWPORT_HEIGHT));
@@ -62,10 +64,19 @@ int main(int argc, char **argv)
 
     // Parse input file
     parseInputFile(&myfile, input);
+
     // Get a grid
     grid = generateGrid(input, placer);
-    // Generate cell connections
-    placeCells(input, placer);
+
+	// Generate the grid model
+	generateGridModel(input, placer);
+	// Push back enough cells for the nets
+	generateCells(input, placer);
+	// Place the cells at random
+	generateCellPlacement(input, placer);
+	// Connect them via their nets
+	generateCellConnections(input, placer);
+
     // Get net lines
     netLines = generateNetLines(placer);
 
@@ -88,8 +99,6 @@ int main(int argc, char **argv)
                 window.setView(calcView(sf::Vector2u(event.size.width, event.size.height), viewportSize));
         }
 
-        // Place cells
-        placeCells(input, placer);
         // Get net lines
         netLines = generateNetLines(placer);
 
@@ -205,16 +214,57 @@ int myRandomInt(int i)
     return std::rand() % i;
 }
 
+drawPosStruct_t getGridCellCoordinate(placerStruct_t *placerStruct, unsigned int col, unsigned int row)
+{
+	drawPosStruct_t drawPos;
+
+	// Depending on our current maximized direction, return the drawing position for the selected column and row
+	if (placerStruct->maximizedDim == DIM_VERTICAL)
+	{
+		drawPos.x = col * placerStruct->cellSize + placerStruct->cellOppositeOffset;
+		drawPos.y = row * placerStruct->cellSize + placerStruct->cellOffset;
+	}
+	else
+	{
+		drawPos.x = col * placerStruct->cellSize + placerStruct->cellOffset;
+		drawPos.y = row * placerStruct->cellSize + placerStruct->cellOppositeOffset;
+	}
+
+	return drawPos;
+}
+
+void updateCellPosition(placerStruct_t *placerStruct, cellStruct_t *cell, unsigned int col, unsigned int row)
+{
+	// Update the cell's grid position
+	cell->pos.col = col;
+	cell->pos.row = row;
+
+	// Update the cell's drawing position
+	cell->drawPos = getGridCellCoordinate(placerStruct, col, row);
+
+	// Add the cell to the grid
+	placerStruct->grid[col][row] = cell;
+}
+
 void generateCellConnections(parsedInputStruct_t *inputStruct, placerStruct_t *placerStruct)
 {
-    unsigned int i, j;
+    unsigned int i, j, rgb[3];
     cellStruct_t *cellPointer;
 
+	// Clear any existing nets
     placerStruct->nets.clear();
 
+	// Go through the parsed input, and add each net
     for(i = 0; i < inputStruct->nets.size(); i++)
     {
+		// Give the net a random color
+		rgb[0] = myRandomInt(256);
+		rgb[1] = myRandomInt(256);
+		rgb[2] = myRandomInt(256);
+
         placerStruct->nets.push_back(netStruct_t());
+
+		placerStruct->nets.back().color = sf::Color(rgb[0], rgb[1], rgb[2], 255);
         for(j = 0; j < inputStruct->nets[i].size(); j++)
         {
             cellPointer = &placerStruct->cells[inputStruct->nets[i][j]];
@@ -229,7 +279,7 @@ void generateGridModel(parsedInputStruct_t *inputStruct, placerStruct_t *placerS
 
     placerStruct->grid.clear();
 
-    // Generate the grid
+    // Generate the grid model
     for(i = 0; i < inputStruct->numCols; i++)
     {
         placerStruct->grid.push_back(std::vector<cellStruct_t*>());
@@ -242,68 +292,53 @@ void generateGridModel(parsedInputStruct_t *inputStruct, placerStruct_t *placerS
 
 void generateCells(parsedInputStruct_t *inputStruct, placerStruct_t *placerStruct)
 {
-    unsigned int i, row, col;
+	unsigned int i;
 
     placerStruct->cells.clear();
 
+	// For each cell
     for(i = 0; i < inputStruct->numCells; i++)
     {
+		// Add a cell
         placerStruct->cells.push_back(cellStruct_t());
+		// Give it an ID
         placerStruct->cells.back().id = i;
-        // Put it somewhere randomly on the grid (make sure it's empty)
-        do
-        {
-            col = static_cast<unsigned int>(myRandomInt(inputStruct->numCols));
-            row = static_cast<unsigned int>(myRandomInt(inputStruct->numRows));
-        }
-        while(placerStruct->grid[col][row] != NULL);
-        // TODO: this is ridiculous, make this a class and have a method return these
-        placerStruct->cells.back().pos.col = col;
-        placerStruct->cells.back().pos.row = row;
-        if(placerStruct->maximizedDim == DIM_VERTICAL)
-        {
-            placerStruct->cells.back().drawPos.x = col * placerStruct->cellSize + placerStruct->cellOppositeOffset;
-            placerStruct->cells.back().drawPos.y = row * placerStruct->cellSize + placerStruct->cellOffset;
-        }
-        else
-        {
-            placerStruct->cells.back().drawPos.x = col * placerStruct->cellSize + placerStruct->cellOffset;
-            placerStruct->cells.back().drawPos.y = row * placerStruct->cellSize + placerStruct->cellOppositeOffset;
-        }
-
-        placerStruct->grid[col][row] = &placerStruct->cells.back();
     }
 }
 
-void placeCells(parsedInputStruct_t *inputStruct, placerStruct_t *placerStruct)
+void generateCellPlacement(parsedInputStruct_t *inputStruct, placerStruct_t *placerStruct)
 {
-    // Generate the grid
-    generateGridModel(inputStruct, placerStruct);
+	unsigned int i, col, row;
 
-    // Push back enough cells for the nets
-    generateCells(inputStruct, placerStruct);
+	for (i = 0; i < placerStruct->cells.size(); i++)
+	{
+		// Put it somewhere randomly on the grid (make sure it's empty)
+		do
+		{
+			col = static_cast<unsigned int>(myRandomInt(inputStruct->numCols));
+			row = static_cast<unsigned int>(myRandomInt(inputStruct->numRows));
+		} while (placerStruct->grid[col][row] != NULL);
 
-    // Now cells are indexed in the cell vector
-    // Connect them via their nets
-    generateCellConnections(inputStruct, placerStruct);
+		// Update the cell's position
+		updateCellPosition(placerStruct, &placerStruct->cells[i], col, row);
+	}
 }
 
 std::vector<sf::Vertex> generateNetLines(placerStruct_t *placerStruct)
 {
-    unsigned int i, j, red, green, blue;
+    unsigned int i, j;
     std::vector<sf::Vertex> netLines;
+	sf::Color color;
     cellStruct_t *cellPointer[2];
 
     for(i = 0; i < placerStruct->nets.size(); i++)
     {
+		color = placerStruct->nets[i].color;
         for(j = 0; j < placerStruct->nets[i].connections.size() - 1; j++)
         {
             cellPointer[0] = placerStruct->nets[i].connections[j];
             cellPointer[1] = placerStruct->nets[i].connections[j + 1];
-            //red = myRandomInt(256);
-            //green = myRandomInt(256);
-            //blue = myRandomInt(256);
-            netLines.push_back(sf::Vertex(sf::Vector2f(cellPointer[0]->drawPos.x, cellPointer[1]->drawPos.y), sf::Color::Blue));
+            netLines.push_back(sf::Vertex(sf::Vector2f(cellPointer[0]->drawPos.x, cellPointer[1]->drawPos.y), color));
         }
     }
 

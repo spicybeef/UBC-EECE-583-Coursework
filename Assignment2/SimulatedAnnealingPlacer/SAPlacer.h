@@ -1,6 +1,10 @@
 #pragma once
 
+// C++ Includes
 #include <vector>
+
+// SFML Includes
+#include <SFML/Graphics.hpp>
 
 // Program defaults
 // Graphics constants
@@ -45,7 +49,7 @@ typedef struct Net
 {
     std::vector<Cell*>                          connections;        ///< Pointers to the cell's connections
     unsigned int                                halfPerim;          ///< Current half perimeter of the net
-
+	sf::Color									color;				///< Net color
 } netStruct_t;
 
 typedef struct
@@ -76,9 +80,12 @@ typedef struct
 // Helpers
 bool parseInputFile(std::ifstream *inputFile, parsedInputStruct_t *inputStruct);
 int myRandomInt(int i);
+drawPosStruct_t getGridCellCoordinate(placerStruct_t *placerStruct, unsigned int col, unsigned int row);
+void updateCellPosition(placerStruct_t *placerStruct, cellStruct_t *cell, unsigned int col, unsigned int row);
 void generateCellConnections(parsedInputStruct_t *inputStruct, placerStruct_t *placerStruct);
 void generateGridModel(parsedInputStruct_t *inputStruct, placerStruct_t *placerStruct);
-void placeCells(parsedInputStruct_t *inputStruct, placerStruct_t *placerStruct);
+void generateCells(parsedInputStruct_t *inputStruct, placerStruct_t *placerStruct);
+void generateCellPlacement(parsedInputStruct_t *inputStruct, placerStruct_t *placerStruct);
 sf::View calcView(const sf::Vector2u &windowsize, const sf::Vector2u &designedsize);
 std::vector<sf::Vertex> generateNetLines(placerStruct_t *placerStruct);
 std::vector<sf::RectangleShape> generateGrid(parsedInputStruct_t *inputStruct, placerStruct_t *placerStruct);
