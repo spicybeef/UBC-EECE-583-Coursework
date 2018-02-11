@@ -50,73 +50,76 @@ typedef enum
 // Col/row position struct
 typedef struct
 {
-    unsigned int                                row;            ///< Cell row
-    unsigned int                                col;            ///< Cell column
+    unsigned int                                row;                    ///< Cell row
+    unsigned int                                col;                    ///< Cell column
 } posStruct_t;
 
 // Drawing x/y position struct
 typedef struct
 {
-    float                                       x;              ///< X coordinate
-    float                                       y;              ///< Y coordinate
+    float                                       x;                      ///< X coordinate
+    float                                       y;                      ///< Y coordinate
 } drawPosStruct_t;
 
 // Cell struct
 typedef struct Cell
 {
-    unsigned int                                id;             ///< Block ID
-    posStruct_t                                 pos;            ///< Current position of the cell
-    drawPosStruct_t                             drawPos;        ///< Current drawing position of the cell's center
+    unsigned int                                id;                     ///< Block ID
+    posStruct_t                                 pos;                    ///< Current position of the cell
+    drawPosStruct_t                             drawPos;                ///< Current drawing position of the cell's center
 } cellStruct_t;
 
 // Net struct
 typedef struct Net
 {
-    std::vector<Cell*>                          connections;        ///< Pointers to the cell's connections
-    unsigned int                                halfPerim;          ///< Current half perimeter of the net
-	sf::Color									color;				///< Net color
+    std::vector<Cell*>                          connections;            ///< Pointers to the cell's connections
+    unsigned int                                halfPerim;              ///< Current half perimeter of the net
+	sf::Color									color;				    ///< Net color
 } netStruct_t;
 
 // Parsed input struct
 typedef struct
 {
-    unsigned int                                numRows;            ///< Number of parsed rows
-    unsigned int                                numCols;            ///< Number of parsed columns
+    unsigned int                                numRows;                ///< Number of parsed rows
+    unsigned int                                numCols;                ///< Number of parsed columns
 
-    unsigned int                                numCells;           ///< Number of cells to place
-    unsigned int                                numConnections;     ///< The number of connections
+    unsigned int                                numCells;               ///< Number of cells to place
+    unsigned int                                numConnections;         ///< The number of connections
 
-	netVec                                      nets;               ///< Parsed nets
+	netVec                                      nets;                   ///< Parsed nets
 
 } parsedInputStruct_t;
 
 // Constants for simulated annealing
-#define ACCEPTANCE_RATE_WINDOW                  100                 ///< Window for the acceptance rate calculation
-#define TEMP_LINEAR_COEFFICIENT                 0.75                ///< Temperature decrease linear coefficient
+#define ACCEPTANCE_RATE_WINDOW                  100                     ///< Window for the acceptance rate calculation
+#define TEMP_LINEAR_COEFFICIENT                 0.75                    ///< Temperature decrease linear coefficient
 
 typedef struct
 {
-    float                                       cellSize;           ///< Current cellsize
-    float                                       cellOffset;         ///< Cell offset for maximized dimension
-    float                                       cellOppositeOffset; ///< Cell offset for other dimension
-    dimension_e                                 maximizedDim;       ///< Current maximized dimension
+    float                                       cellSize;               ///< Current cellsize
+    float                                       cellOffset;             ///< Cell offset for maximized dimension
+    float                                       cellOppositeOffset;     ///< Cell offset for other dimension
+    dimension_e                                 maximizedDim;           ///< Current maximized dimension
 
-    std::vector<std::vector<cellStruct_t*>>     grid;               ///< Grid containing pointers to cells
-    std::vector<cellStruct_t>                   cells;              ///< Cells
-    std::vector<netStruct_t>                    nets;               ///< Nets
+    std::vector<std::vector<cellStruct_t*>>     grid;                   ///< Grid containing pointers to cells
+    std::vector<cellStruct_t>                   cells;                  ///< Cells
+    std::vector<netStruct_t>                    nets;                   ///< Nets
 
-    state_e                                     currentState;       ///< Current simulated annealing state
-    unsigned int                                movesPerTempDec;    ///< Number of swaps to perform per temperature step
-    unsigned int                                totalHalfPerim;     ///< Total half perimeter
-    double                                      temperature;        ///< Current simulated annealing temperature
-    std::vector<bool>                           acceptanceTracker;  ///< Keep track of what's been accepted
-    double                                      acceptanceRate;     ///< Current acceptance rate
+    state_e                                     currentState;           ///< Current simulated annealing state
+    unsigned int                                movesPerTempDec;        ///< Number of swaps to perform per temperature step
+    unsigned int                                currentMove;            ///< Current move
+    unsigned int                                currentHalfPerimSum;    ///< Current half perimeter sum
+    unsigned int                                startingHalfPerimSum;   ///< Starting half perimeter sum
+    double                                      temperature;            ///< Current simulated annealing temperature
+    std::vector<bool>                           acceptanceTracker;      ///< Keeps track of what's been accepted
+    std::vector<int>                            costTracker;            ///< Keeps track of the cost
 } placerStruct_t;
 
 void doSimulatedAnnealing(placerStruct_t *placerStruct);
 
 bool parseInputFile(std::ifstream *inputFile, parsedInputStruct_t *inputStruct);
-int myRandomInt(int i);
+int getRandomInt(int i);
+double getRandomDouble(void);
 drawPosStruct_t getGridCellCoordinate(placerStruct_t *placerStruct, unsigned int col, unsigned int row);
 void updateCellPosition(placerStruct_t *placerStruct, cellStruct_t *cell, unsigned int col, unsigned int row);
 void generateCellConnections(parsedInputStruct_t *inputStruct, placerStruct_t *placerStruct);

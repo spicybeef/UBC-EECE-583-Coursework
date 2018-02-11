@@ -4,6 +4,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <ctime>
 
 // SFML Includes
 #include <SFML/Graphics.hpp>
@@ -16,10 +17,10 @@ placerStruct_t *placer = new placerStruct_t();
 
 int main(int argc, char **argv)
 {
-    unsigned int i;
+    unsigned int i, swapCount;
 	// File handling
     //char * filename = argv[1];
-    const char * filename = "..\\benchmarks\\apex4.txt";
+    const char * filename = "..\\benchmarks\\apex1.txt";
 	// Viewport size
     const sf::Vector2u viewportSize(
         static_cast<unsigned int>(WIN_VIEWPORT_WIDTH),
@@ -27,6 +28,9 @@ int main(int argc, char **argv)
 	// Drawing components
     std::vector<sf::RectangleShape> backgroundGrid;
     std::vector<sf::Vertex> netLines;
+
+    // Seed our randomizer with the current time
+    std::srand(static_cast<unsigned int>(std::time(nullptr)));
 
     // Background
     sf::RectangleShape background(sf::Vector2f(WIN_GRAPHICPORT_WIDTH, WIN_GRAPHICPORT_HEIGHT));
@@ -80,12 +84,9 @@ int main(int argc, char **argv)
     // Place the cells at random
     generateCellPlacement(input->numCols, input->numRows, placer);
 
-    // Initialize placer
-    // Set state
+    // Initialize placer state
     placer->currentState = STATE_START;
-    // Determine moves per temperature decrease 10 * N^(4/3)
-    placer->movesPerTempDec = static_cast<unsigned int>(10.0 * pow(static_cast<double>(placer->cells.size()), 4.0 / 3.0));
-
+    
     // Create our render window object
     // Give it a default type (titlebar, close button)
     sf::RenderWindow window(sf::VideoMode(
@@ -95,8 +96,22 @@ int main(int argc, char **argv)
     window.setView(calcView(window.getSize(), viewportSize));
 
 	// Do simulated annealing and output results
+    swapCount = 0;
     while(window.isOpen())
     { 
+        // Run our simulated annealing
+        doSimulatedAnnealing(placer);
+        swapCount++;
+        // Only update every so often to speed up process
+        if(swapCount < static_cast<unsigned int>(0.01 * static_cast<double>(placer->movesPerTempDec)))
+        {
+            continue;
+        }
+        else
+        {
+            swapCount = 0;
+        }
+
         sf::Event event;
         while(window.pollEvent(event))
         {
@@ -106,13 +121,8 @@ int main(int argc, char **argv)
                 window.setView(calcView(sf::Vector2u(event.size.width, event.size.height), viewportSize));
         }
 
-        // Run our simulated annealing
-        doSimulatedAnnealing(placer);
-
         // Get net lines
         netLines = generateNetLines(placer);
-        // Calculate total half perimeter
-        placer->totalHalfPerim = calculateTotalHalfPerim(placer->nets);
 
 		// Clear window
         window.clear();
@@ -142,36 +152,126 @@ int main(int argc, char **argv)
 void doSimulatedAnnealing(placerStruct_t *placerStruct)
 {
     unsigned int i, randPicks[2];
-    int oldHalfPerimSum, newHalfPerimSum;
-    double standardDev;
-    std::vector<int> costTracker;
+    int oldHalfPerimSum, newHalfPerimSum, cost;
+    double standardDev, randomDouble;
+    bool acceptSwap;
 
     switch(placerStruct->currentState)
     {
         case STATE_START:
+            placerStruct->costTracker.clear();
+            placerStruct->acceptanceTracker.clear();
+            // Determine moves per temperature decrease 10 * N^(4/3)
+            placerStruct->movesPerTempDec = static_cast<unsigned int>(10.0 * pow(static_cast<double>(placer->cells.size()), 4.0 / 3.0));
+            std::cout << "For " << placer->cells.size() << " cells, each temperature decrement will have ";
+            std::cout << placerStruct->movesPerTempDec << " moves" << std::endl;
+            // Obtain the initial total half perimeter
+            placerStruct->startingHalfPerimSum = calculateTotalHalfPerim(placerStruct->nets);
             // Determine the initial temperature
             // Perform 50 swaps
-            placerStruct->acceptanceTracker.clear();
             for(i = 0; i < 50; i++)
             {
                 // Record initial total half perimeter
                 oldHalfPerimSum = calculateTotalHalfPerim(placerStruct->nets);
                 // Pick two cells at random
-                randPicks[0] = myRandomInt(static_cast<unsigned int>(placerStruct->cells.size()));
-                randPicks[1] = myRandomInt(static_cast<unsigned int>(placerStruct->cells.size()));
+                randPicks[0] = getRandomInt(static_cast<unsigned int>(placerStruct->cells.size()));
+                randPicks[1] = getRandomInt(static_cast<unsigned int>(placerStruct->cells.size()));
                 // Swap them
                 swapCells(&placerStruct->cells[randPicks[0]], &placerStruct->cells[randPicks[1]], placerStruct);
                 // Record the new total half perimeter
                 newHalfPerimSum = calculateTotalHalfPerim(placerStruct->nets);
-                // Push back
+                // Push back cost
                 std::cout << "Cost of swap " << i << " was " << newHalfPerimSum - oldHalfPerimSum << std::endl;
-                costTracker.push_back(newHalfPerimSum - oldHalfPerimSum);
+                placerStruct->costTracker.push_back(newHalfPerimSum - oldHalfPerimSum);
             }
-            standardDev = calculateStandardDeviation(costTracker);
+            // Calculate the standard deviation, this is used for the initial temperature
+            standardDev = calculateStandardDeviation(placerStruct->costTracker);
+
             std::cout << "Standard deviation is " << standardDev << std::endl;
-            //placerStruct->currentState = STATE_FINISHED;
+            placerStruct->temperature = standardDev * 20;
+            std::cout << "Starting temperature is " << placerStruct->temperature;
+            
+            // Reset cost tracker
+            placerStruct->costTracker.clear();
+            // Start annealin'
+            placerStruct->currentState = STATE_ANNEALING;
             break;
         case STATE_ANNEALING:
+            // We are annealing
+            // Initially we don't accept the swap
+            acceptSwap = false;
+            // Calculate the current total half perimeter
+            placer->currentHalfPerimSum = calculateTotalHalfPerim(placer->nets);
+            // Check if we're done for this temperature
+            if(placerStruct->currentMove == placerStruct->movesPerTempDec)
+            {
+                // Restart our move count
+                placerStruct->currentMove = 0;
+                // Determine the standard deviation
+                standardDev = calculateStandardDeviation(placerStruct->costTracker);
+                // Calculate the new temperature
+                placerStruct->temperature = calculateNewTemp(placerStruct->temperature, standardDev, TEMP_DECREASE_LINEAR);
+                // Reset the cost tracker
+                placerStruct->costTracker.clear();
+                // Reset the acceptance tracker
+                placerStruct->acceptanceTracker.clear();
+            }
+            // We still have swaps to do
+            else
+            {
+                // Record initial total half perimeter
+                oldHalfPerimSum = calculateTotalHalfPerim(placerStruct->nets);
+                // Pick two cells at random
+                randPicks[0] = getRandomInt(static_cast<unsigned int>(placerStruct->cells.size()));
+                randPicks[1] = getRandomInt(static_cast<unsigned int>(placerStruct->cells.size()));
+                // Swap them
+                swapCells(&placerStruct->cells[randPicks[0]], &placerStruct->cells[randPicks[1]], placerStruct);
+                // Record the new total half perimeter
+                newHalfPerimSum = calculateTotalHalfPerim(placerStruct->nets);
+
+                // calculate cost
+                cost = newHalfPerimSum - oldHalfPerimSum;
+
+                // If this was a bad move, if so, check if we are going to accept it
+                if(newHalfPerimSum > oldHalfPerimSum)
+                {
+                    randomDouble = getRandomDouble();
+                    // Check if we accept swap
+                    if(randomDouble < exp(-1.0 * static_cast<double>(cost) / placerStruct->temperature))
+                    {
+                        // Accept the swap!
+                        acceptSwap = true;
+                    }
+                    else
+                    {
+                        // Not going to happen
+                        // Revert cell swap
+                        swapCells(&placerStruct->cells[randPicks[0]], &placerStruct->cells[randPicks[1]], placerStruct);
+                    }
+                }
+                else
+                {
+                    // Accept the swap!
+                    acceptSwap = true;
+                }
+
+                if(acceptSwap)
+                {
+                    // Push back acceptance
+                    placerStruct->acceptanceTracker.push_back(true);
+                    // Push back cost
+                    //std::cout << "Cost of swap " << i << " was " << newHalfPerimSum - oldHalfPerimSum << std::endl;
+                    placerStruct->costTracker.push_back(cost);
+                }
+                else
+                {
+                    // Push back non-acceptance
+                    placerStruct->acceptanceTracker.push_back(false);
+                }
+
+                // Next move
+                placerStruct->currentMove++;
+            }
             break;
         case STATE_FINISHED:
             break;
@@ -257,10 +357,14 @@ bool parseInputFile(std::ifstream *inputFile, parsedInputStruct_t *inputStruct)
     return true;
 }
 
-// random generator function:
-int myRandomInt(int i)
+int getRandomInt(int i)
 {
     return std::rand() % i;
+}
+
+double getRandomDouble(void)
+{
+    return static_cast<double>(std::rand()) / static_cast<double>(RAND_MAX);
 }
 
 drawPosStruct_t getGridCellCoordinate(placerStruct_t *placerStruct, unsigned int col, unsigned int row)
@@ -307,9 +411,9 @@ void generateCellConnections(parsedInputStruct_t *inputStruct, placerStruct_t *p
     for(i = 0; i < inputStruct->nets.size(); i++)
     {
 		// Give the net a random color
-		rgb[0] = myRandomInt(256);
-		rgb[1] = myRandomInt(256);
-		rgb[2] = myRandomInt(256);
+		rgb[0] = getRandomInt(256);
+		rgb[1] = getRandomInt(256);
+		rgb[2] = getRandomInt(256);
 
         placerStruct->nets.push_back(netStruct_t());
 
@@ -364,8 +468,8 @@ void generateCellPlacement(unsigned int numCols, unsigned int numRows, placerStr
 		// Put it somewhere randomly on the grid (make sure it's empty)
 		do
 		{
-			col = static_cast<unsigned int>(myRandomInt(numCols));
-			row = static_cast<unsigned int>(myRandomInt(numRows));
+			col = static_cast<unsigned int>(getRandomInt(numCols));
+			row = static_cast<unsigned int>(getRandomInt(numRows));
 		} while (placerStruct->grid[col][row] != NULL);
 
 		// Update the cell's position
@@ -482,8 +586,15 @@ std::vector<sf::RectangleShape> generateGrid(parsedInputStruct_t *inputStruct, p
 std::string getInfoportString(placerStruct_t *placerStruct)
 {
     std::stringstream stringStream;
+    int difference;
 
-    stringStream << "Temperature: " << placerStruct->temperature << " Total half perimeter: " << placerStruct->totalHalfPerim << std::endl;
+    difference = static_cast<int>(placerStruct->startingHalfPerimSum) - static_cast<int>(placerStruct->currentHalfPerimSum);
+
+    stringStream << "Temperature: " << placerStruct->temperature;
+    stringStream << " Total half perimeter: " << placerStruct->currentHalfPerimSum;
+    stringStream << " Improvement: " << 100.0 * static_cast<double>(difference) / static_cast<double>(placerStruct->startingHalfPerimSum) << "%";
+    stringStream << " Acceptance: " << calculateAcceptanceRate(placerStruct->acceptanceTracker) << std::endl;
+    stringStream << "Move: " << placerStruct->currentMove << " out of: " << placerStruct->movesPerTempDec;
 
     return stringStream.str();
 }
@@ -584,11 +695,11 @@ unsigned int calculateTotalHalfPerim(std::vector<netStruct_t> &nets)
             }
             if(cellPointer->pos.row > maxY)
             {
-                maxY = cellPointer->pos.col;
+                maxY = cellPointer->pos.row;
             }
             if(cellPointer->pos.row < minY)
             {
-                minY = cellPointer->pos.col;
+                minY = cellPointer->pos.row;
             }
         }
 
