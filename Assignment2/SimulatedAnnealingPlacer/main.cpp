@@ -19,8 +19,8 @@ int main(int argc, char **argv)
 {
     unsigned int i, swapCount;
 	// File handling
-    //char * filename = argv[1];
-    const char * filename = "..\\benchmarks\\apex1.txt";
+    char * filename = argv[1];
+    //const char * filename = "..\\benchmarks\\apex1.txt";
 	// Viewport size
     const sf::Vector2u viewportSize(
         static_cast<unsigned int>(WIN_VIEWPORT_WIDTH),
