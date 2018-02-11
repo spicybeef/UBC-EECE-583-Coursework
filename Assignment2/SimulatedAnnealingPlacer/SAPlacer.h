@@ -18,8 +18,6 @@
 #define WIN_INFOPORT_PADDING                    10.f
 // Grid constants
 #define GRID_SHRINK_FACTOR                      0.8f
-// Infoport constants
-#define INFOPORT_CHAR_WIDTH                     109
 // typedef helpers to make things legible
 typedef std::vector<std::vector<unsigned int>>	netVec;
 
@@ -61,21 +59,26 @@ typedef struct
     float                                       y;                      ///< Y coordinate
 } drawPosStruct_t;
 
+// Forward declarations since net and cell structs reference each other
+typedef struct Net netStruct_t;
+typedef struct Cell cellStruct_t;
+
+// Net struct
+typedef struct Net
+{
+    std::vector<cellStruct_t*>                  connections;            ///< Pointers to the cell's connections
+    unsigned int                                maxHalfPerim;           ///< Maximum half perimeter of the net
+	sf::Color									color;				    ///< Net color
+} netStruct_t;
+
 // Cell struct
 typedef struct Cell
 {
     unsigned int                                id;                     ///< Block ID
     posStruct_t                                 pos;                    ///< Current position of the cell
     drawPosStruct_t                             drawPos;                ///< Current drawing position of the cell's center
+    netStruct_t                                 *cellNet;               ///< A pointer to the cell's net, for easy reference
 } cellStruct_t;
-
-// Net struct
-typedef struct Net
-{
-    std::vector<Cell*>                          connections;            ///< Pointers to the cell's connections
-    unsigned int                                halfPerim;              ///< Current half perimeter of the net
-	sf::Color									color;				    ///< Net color
-} netStruct_t;
 
 // Parsed input struct
 typedef struct
@@ -91,8 +94,7 @@ typedef struct
 } parsedInputStruct_t;
 
 // Constants for simulated annealing
-#define ACCEPTANCE_RATE_WINDOW                  100                     ///< Window for the acceptance rate calculation
-#define TEMP_LINEAR_COEFFICIENT                 0.75                    ///< Temperature decrease linear coefficient
+#define TEMP_LINEAR_COEFFICIENT                 0.9                     ///< Temperature decrease linear coefficient
 
 typedef struct
 {
@@ -111,6 +113,7 @@ typedef struct
     unsigned int                                currentHalfPerimSum;    ///< Current half perimeter sum
     unsigned int                                startingHalfPerimSum;   ///< Starting half perimeter sum
     double                                      temperature;            ///< Current simulated annealing temperature
+    unsigned int                                totalTempDecrements;    ///< Count the number of temperature decrements so far
     std::vector<bool>                           acceptanceTracker;      ///< Keeps track of what's been accepted
     std::vector<int>                            costTracker;            ///< Keeps track of the cost
 } placerStruct_t;
@@ -126,7 +129,10 @@ void generateCellConnections(parsedInputStruct_t *inputStruct, placerStruct_t *p
 void generateGridModel(unsigned int numCols, unsigned int numRows, placerStruct_t *placerStruct);
 void generateCells(unsigned int numCells, placerStruct_t *placerStruct);
 void generateCellPlacement(unsigned int numCols, unsigned int numRows, placerStruct_t *placerStruct);
+void updateCellNet(std::vector<netStruct_t> &nets);
 void swapCells(cellStruct_t *cell0, cellStruct_t *cell1, placerStruct_t *placerStruct);
+void initializeNetColors(std::vector<netStruct_t> &nets, unsigned int col, unsigned int row);
+void updateNetColor(cellStruct_t &cell);
 
 std::vector<sf::Vertex> generateNetLines(placerStruct_t *placerStruct);
 std::vector<sf::RectangleShape> generateGrid(parsedInputStruct_t *inputStruct, placerStruct_t *placerStruct);
@@ -138,4 +144,5 @@ std::string getInfoportString(placerStruct_t *placerStruct);
 double calculateStandardDeviation(std::vector<int> dataSet);
 double calculateNewTemp(double oldTemp, double stdDev, temperatureDecrease_e mode);
 float calculateAcceptanceRate(std::vector<bool> acceptanceTracker);
+unsigned int calculateHalfPerim(netStruct_t &net);
 unsigned int calculateTotalHalfPerim(std::vector<netStruct_t> &nets);

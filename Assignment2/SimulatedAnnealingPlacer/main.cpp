@@ -1,5 +1,6 @@
 // C++ Includes
 #include <iostream>
+#include <iomanip>
 #include <fstream>
 #include <sstream>
 #include <string>
@@ -20,7 +21,7 @@ int main(int argc, char **argv)
     unsigned int i, swapCount;
 	// File handling
     char * filename = argv[1];
-    //const char * filename = "..\\benchmarks\\apex1.txt";
+    //const char * filename = "..\\benchmarks\\apex4.txt";
 	// Viewport size
     const sf::Vector2u viewportSize(
         static_cast<unsigned int>(WIN_VIEWPORT_WIDTH),
@@ -83,6 +84,10 @@ int main(int argc, char **argv)
     generateGridModel(input->numCols, input->numRows, placer);
     // Place the cells at random
     generateCellPlacement(input->numCols, input->numRows, placer);
+    // Give each cell a pointer to their on net
+    updateCellNet(placer->nets);
+    // Set all nets to their starting color
+    initializeNetColors(placer->nets, input->numCols, input->numRows);
 
     // Initialize placer state
     placer->currentState = STATE_START;
@@ -159,6 +164,7 @@ void doSimulatedAnnealing(placerStruct_t *placerStruct)
     switch(placerStruct->currentState)
     {
         case STATE_START:
+            placerStruct->totalTempDecrements = 0;
             placerStruct->costTracker.clear();
             placerStruct->acceptanceTracker.clear();
             // Determine moves per temperature decrease 10 * N^(4/3)
@@ -188,7 +194,7 @@ void doSimulatedAnnealing(placerStruct_t *placerStruct)
             standardDev = calculateStandardDeviation(placerStruct->costTracker);
 
             std::cout << "Standard deviation is " << standardDev << std::endl;
-            placerStruct->temperature = standardDev * 20;
+            placerStruct->temperature = standardDev * 10;
             std::cout << "Starting temperature is " << placerStruct->temperature;
             
             // Reset cost tracker
@@ -211,6 +217,8 @@ void doSimulatedAnnealing(placerStruct_t *placerStruct)
                 standardDev = calculateStandardDeviation(placerStruct->costTracker);
                 // Calculate the new temperature
                 placerStruct->temperature = calculateNewTemp(placerStruct->temperature, standardDev, TEMP_DECREASE_LINEAR);
+                // Increment the temperature
+                placerStruct->totalTempDecrements++;
                 // Reset the cost tracker
                 placerStruct->costTracker.clear();
                 // Reset the acceptance tracker
@@ -257,6 +265,10 @@ void doSimulatedAnnealing(placerStruct_t *placerStruct)
 
                 if(acceptSwap)
                 {
+                    // Update the cells' net color
+                    updateNetColor(placerStruct->cells[randPicks[0]]);
+                    updateNetColor(placerStruct->cells[randPicks[1]]);
+                    
                     // Push back acceptance
                     placerStruct->acceptanceTracker.push_back(true);
                     // Push back cost
@@ -401,7 +413,7 @@ void updateCellPosition(placerStruct_t *placerStruct, cellStruct_t *cell, unsign
 
 void generateCellConnections(parsedInputStruct_t *inputStruct, placerStruct_t *placerStruct)
 {
-    unsigned int i, j, rgb[3];
+    unsigned int i, j;
     cellStruct_t *cellPointer;
 
 	// Clear any existing nets
@@ -410,16 +422,12 @@ void generateCellConnections(parsedInputStruct_t *inputStruct, placerStruct_t *p
 	// Go through the parsed input, and add each net
     for(i = 0; i < inputStruct->nets.size(); i++)
     {
-		// Give the net a random color
-		rgb[0] = getRandomInt(256);
-		rgb[1] = getRandomInt(256);
-		rgb[2] = getRandomInt(256);
-
+        // Push a fresh net to the placer
         placerStruct->nets.push_back(netStruct_t());
 
-		placerStruct->nets.back().color = sf::Color(rgb[0], rgb[1], rgb[2], 255);
         for(j = 0; j < inputStruct->nets[i].size(); j++)
         {
+            // Give the net its cell references
             cellPointer = &placerStruct->cells[inputStruct->nets[i][j]];
             placerStruct->nets.back().connections.push_back(cellPointer);
         }
@@ -470,11 +478,26 @@ void generateCellPlacement(unsigned int numCols, unsigned int numRows, placerStr
 		{
 			col = static_cast<unsigned int>(getRandomInt(numCols));
 			row = static_cast<unsigned int>(getRandomInt(numRows));
-		} while (placerStruct->grid[col][row] != NULL);
+		}
+        while(placerStruct->grid[col][row] != NULL);
 
 		// Update the cell's position
 		updateCellPosition(placerStruct, &placerStruct->cells[i], col, row);
 	}
+}
+
+void updateCellNet(std::vector<netStruct_t> &nets)
+{
+    unsigned int i, j;
+
+    // Go through the nets and its connections, and update all of the cells' nets
+    for(i = 0; i < nets.size(); i++)
+    {
+        for(j = 0; j < nets[i].connections.size(); j++)
+        {
+            nets[i].connections[j]->cellNet = &nets[i];
+        }
+    }
 }
 
 void swapCells(cellStruct_t *cell0, cellStruct_t *cell1, placerStruct_t *placerStruct)
@@ -487,6 +510,57 @@ void swapCells(cellStruct_t *cell0, cellStruct_t *cell1, placerStruct_t *placerS
     // Update the cells' positions
     updateCellPosition(placerStruct, cell0, originalPos[1].col, originalPos[1].row);
     updateCellPosition(placerStruct, cell1, originalPos[0].col, originalPos[0].row);
+}
+
+void initializeNetColors(std::vector<netStruct_t> &nets, unsigned int col, unsigned int row)
+{
+    unsigned int i, rgb[3];
+    sf::Color startingColor;
+
+    // Nets start with a red color
+    rgb[0] = 255;
+    rgb[1] = 0;
+    rgb[2] = 0;
+
+    startingColor = sf::Color(rgb[0], rgb[1], rgb[2], 255);
+
+    // When this function has been called, nets should have been randomly placed on the grid
+    // Use their current position to give them their starting
+    for(i = 0; i < nets.size(); i++)
+    {
+        // Calculate the half perimeter of the net, we use the starting position as its "max"
+        //nets[i].maxHalfPerim = calculateHalfPerim(nets[i]);
+        // Make the maximum half perimeter equal to row + width
+        nets[i].maxHalfPerim = col + row - 2;
+        // Give the net the starting color
+        nets[i].color = startingColor;
+    }
+}
+
+void updateNetColor(cellStruct_t &cell)
+{
+    unsigned int currentHalfPerim, maxHalfPerim, rgb[3];
+    sf::Color newColor;
+    netStruct_t *netPointer = cell.cellNet;
+
+    maxHalfPerim = netPointer->maxHalfPerim;
+    // Calculate the half perimeter of the net
+    currentHalfPerim = calculateHalfPerim(*netPointer);
+
+    // Interpolate the net's new color
+    // Blue| maxHalfPerim -> 1 |Red
+    rgb[0] = static_cast<unsigned int>(255.0 * static_cast<double>(currentHalfPerim) / static_cast<double>(maxHalfPerim));
+    rgb[1] = 0;
+    rgb[2] = static_cast<unsigned int>(255.0 * static_cast<double>(maxHalfPerim - currentHalfPerim) / static_cast<double>(maxHalfPerim));
+    newColor = sf::Color(rgb[0], rgb[1], rgb[2], 255);
+
+    //std::cout << maxHalfPerim << " " << currentHalfPerim << std::endl;
+    //std::cout << rgb[0] << " ";
+    //std::cout << rgb[1] << " ";
+    //std::cout << rgb[2] << std::endl;
+
+    // Update the net's color
+    netPointer->color = newColor;
 }
 
 std::vector<sf::Vertex> generateNetLines(placerStruct_t *placerStruct)
@@ -590,11 +664,14 @@ std::string getInfoportString(placerStruct_t *placerStruct)
 
     difference = static_cast<int>(placerStruct->startingHalfPerimSum) - static_cast<int>(placerStruct->currentHalfPerimSum);
 
-    stringStream << "Temperature: " << placerStruct->temperature;
-    stringStream << " Total half perimeter: " << placerStruct->currentHalfPerimSum;
-    stringStream << " Improvement: " << 100.0 * static_cast<double>(difference) / static_cast<double>(placerStruct->startingHalfPerimSum) << "%";
-    stringStream << " Acceptance: " << calculateAcceptanceRate(placerStruct->acceptanceTracker) << std::endl;
-    stringStream << "Move: " << placerStruct->currentMove << " out of: " << placerStruct->movesPerTempDec;
+    stringStream << std::fixed << std::setprecision(3);
+    stringStream << "Temperature: " << std::setw(12) << placerStruct->temperature << "   ";
+    stringStream << "StartHPS:    " << std::setw(12) << placerStruct->startingHalfPerimSum << "   ";
+    stringStream << "CurrentHPS:  " << std::setw(12) << placerStruct->currentHalfPerimSum << "   ";
+    stringStream << "Improvement: " << std::setw(11) << 100.0 * static_cast<double>(difference) / static_cast<double>(placerStruct->startingHalfPerimSum) << "%   " << std::endl;
+    stringStream << "Decrements:  " << std::setw(12) << placerStruct->totalTempDecrements << "   ";
+    stringStream << "Move:       "  << std::setw(6) << placerStruct->currentMove << "/" << std::setw(6) << placerStruct->movesPerTempDec << "   ";
+    stringStream << "Acceptance:  " << std::setw(11) << 100.0 * calculateAcceptanceRate(placerStruct->acceptanceTracker) << "%   ";
 
     return stringStream.str();
 }
@@ -664,6 +741,47 @@ float calculateAcceptanceRate(std::vector<bool> acceptanceTracker)
 
     // Return the ratio
     return static_cast<float>(count) / static_cast<float>(acceptanceTracker.size());
+}
+
+unsigned int calculateHalfPerim(netStruct_t &net)
+{
+    unsigned int i, minX, maxX, minY, maxY, halfPerim;
+    cellStruct_t *cellPointer;
+
+    // Reset our min max
+    minX = 0xDEADBEEF;
+    maxX = 0;
+    minY = 0xDEADBEEF;
+    maxY = 0;
+
+    halfPerim = 0;
+
+    // Go through the connections and record the minimum and maximums in each direction
+    for(i = 0; i < net.connections.size(); i++)
+    {
+        cellPointer = net.connections[i];
+        if(cellPointer->pos.col > maxX)
+        {
+            maxX = cellPointer->pos.col;
+        }
+        if(cellPointer->pos.col < minX)
+        {
+            minX = cellPointer->pos.col;
+        }
+        if(cellPointer->pos.row > maxY)
+        {
+            maxY = cellPointer->pos.row;
+        }
+        if(cellPointer->pos.row < minY)
+        {
+            minY = cellPointer->pos.row;
+        }
+    }
+
+    // Now that we have min and max, add the half perimeter to the total
+    halfPerim += ((maxX - minX) + (maxY - minY));
+
+    return halfPerim;
 }
 
 unsigned int calculateTotalHalfPerim(std::vector<netStruct_t> &nets)
