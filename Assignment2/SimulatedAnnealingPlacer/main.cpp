@@ -38,7 +38,6 @@ int main(int argc, char **argv)
     sf::Text text;
     font.loadFromFile("C:\\Windows\\Fonts\\consola.ttf");
     text.setFont(font);
-    text.setString("S******************************************************************************E");
     text.setCharacterSize(17);
     text.setFillColor(sf::Color::Green);
     text.setStyle(sf::Text::Regular);
@@ -57,11 +56,11 @@ int main(int argc, char **argv)
     // Check if file was opened properly
     if(myfile.is_open())
     {
-        printf("File %s opened! Here's what's in it:\n", filename);
+        std::cout << "File " << filename << " opened! Here's what's in it:" << std::endl;
     }
     else
     {
-        printf("FATAL ERROR, file %s couldn't be opened!\n", filename);
+        std::cout << "FATAL ERROR! File " << filename << " could not be opened!" << std::endl;
         return -1;
     }
 
@@ -76,6 +75,17 @@ int main(int argc, char **argv)
 	// Connect them via their nets
 	generateCellConnections(input, placer);
 
+    // Generate the grid model
+    generateGridModel(input->numCols, input->numRows, placer);
+    // Place the cells at random
+    generateCellPlacement(input->numCols, input->numRows, placer);
+
+    // Initialize placer
+    // Set state
+    placer->currentState = STATE_START;
+    // Determine moves per temperature decrease 10 * N^(4/3)
+    placer->movesPerTempDec = static_cast<unsigned int>(10.0 * pow(static_cast<double>(placer->cells.size()), 4.0 / 3.0));
+
     // Create our render window object
     // Give it a default type (titlebar, close button)
     sf::RenderWindow window(sf::VideoMode(
@@ -84,7 +94,7 @@ int main(int argc, char **argv)
         "Simulated Annealing Placer", sf::Style::Titlebar | sf::Style::Close);
     window.setView(calcView(window.getSize(), viewportSize));
 
-	// Draw stuff
+	// Do simulated annealing and output results
     while(window.isOpen())
     { 
         sf::Event event;
@@ -96,18 +106,20 @@ int main(int argc, char **argv)
                 window.setView(calcView(sf::Vector2u(event.size.width, event.size.height), viewportSize));
         }
 
-		// Generate the grid model
-		generateGridModel(input->numCols, input->numRows, placer);
-		// Place the cells at random
-		generateCellPlacement(input->numCols, input->numRows, placer);
+        // Run our simulated annealing
+        doSimulatedAnnealing(placer);
+
         // Get net lines
         netLines = generateNetLines(placer);
+        // Calculate total half perimeter
+        placer->totalHalfPerim = calculateTotalHalfPerim(placer->nets);
 
 		// Clear window
         window.clear();
         // Draw background
         window.draw(background);
         // Draw infoport
+        text.setString(getInfoportString(placer));
         window.draw(text);
         // Draw separator
         window.draw(line, 2, sf::Lines);
@@ -125,6 +137,47 @@ int main(int argc, char **argv)
     }
 
     return 0;
+}
+
+void doSimulatedAnnealing(placerStruct_t *placerStruct)
+{
+    unsigned int i, randPicks[2];
+    int oldHalfPerimSum, newHalfPerimSum;
+    double standardDev;
+    std::vector<int> costTracker;
+
+    switch(placerStruct->currentState)
+    {
+        case STATE_START:
+            // Determine the initial temperature
+            // Perform 50 swaps
+            placerStruct->acceptanceTracker.clear();
+            for(i = 0; i < 50; i++)
+            {
+                // Record initial total half perimeter
+                oldHalfPerimSum = calculateTotalHalfPerim(placerStruct->nets);
+                // Pick two cells at random
+                randPicks[0] = myRandomInt(static_cast<unsigned int>(placerStruct->cells.size()));
+                randPicks[1] = myRandomInt(static_cast<unsigned int>(placerStruct->cells.size()));
+                // Swap them
+                swapCells(&placerStruct->cells[randPicks[0]], &placerStruct->cells[randPicks[1]], placerStruct);
+                // Record the new total half perimeter
+                newHalfPerimSum = calculateTotalHalfPerim(placerStruct->nets);
+                // Push back
+                std::cout << "Cost of swap " << i << " was " << newHalfPerimSum - oldHalfPerimSum << std::endl;
+                costTracker.push_back(newHalfPerimSum - oldHalfPerimSum);
+            }
+            standardDev = calculateStandardDeviation(costTracker);
+            std::cout << "Standard deviation is " << standardDev << std::endl;
+            //placerStruct->currentState = STATE_FINISHED;
+            break;
+        case STATE_ANNEALING:
+            break;
+        case STATE_FINISHED:
+            break;
+        default:
+            break;
+    }
 }
 
 std::vector<std::string> splitString(std::string inString, char delimiter)
@@ -179,9 +232,10 @@ bool parseInputFile(std::ifstream *inputFile, parsedInputStruct_t *inputStruct)
     inputStruct->numConnections = stoi(stringVec[1]);
     inputStruct->numRows = stoi(stringVec[2]);
     inputStruct->numCols = stoi(stringVec[3]);
-    printf("Grid size is %d rows x %d cols\n", inputStruct->numRows, inputStruct->numCols);
-    printf("Number of cells is %d\n", inputStruct->numCells);
-    printf("Number of connections is %d\n", inputStruct->numConnections);
+
+    std::cout << "Grid size is " << inputStruct->numRows << " rows x " << inputStruct->numCols << " cols" << std::endl;
+    std::cout << "Number of cells is " << inputStruct->numCells << std::endl;
+    std::cout << "Number of connections is " << inputStruct->numConnections << std::endl;
 
     // 2. Get all connections
     for(i = 0; i < inputStruct->numConnections; i++)
@@ -190,16 +244,13 @@ bool parseInputFile(std::ifstream *inputFile, parsedInputStruct_t *inputStruct)
         stringVec = splitString(line, ' ');
         // Get number of nodes for this net
         numNodes = stoi(stringVec[0]);
-        //printf("Connection %d: %d nodes:\n\t", i, numNodes);
         // Now get all nodes for this net
         // Push back a new vector for this
         inputStruct->nets.push_back(std::vector<unsigned int>());
         for(j = 0; j < numNodes; j++)
         {
             inputStruct->nets[i].push_back(stoi(stringVec[j + 1]));
-            //printf("%d ", inputStruct->nets[i][j]);
         }
-        //printf("\n");
     }
 
 
@@ -322,6 +373,18 @@ void generateCellPlacement(unsigned int numCols, unsigned int numRows, placerStr
 	}
 }
 
+void swapCells(cellStruct_t *cell0, cellStruct_t *cell1, placerStruct_t *placerStruct)
+{
+    posStruct_t originalPos[2];
+
+    originalPos[0] = cell0->pos;
+    originalPos[1] = cell1->pos;
+
+    // Update the cells' positions
+    updateCellPosition(placerStruct, cell0, originalPos[1].col, originalPos[1].row);
+    updateCellPosition(placerStruct, cell1, originalPos[0].col, originalPos[0].row);
+}
+
 std::vector<sf::Vertex> generateNetLines(placerStruct_t *placerStruct)
 {
     unsigned int i, j;
@@ -414,4 +477,124 @@ std::vector<sf::RectangleShape> generateGrid(parsedInputStruct_t *inputStruct, p
     }
 
     return grid;
+}
+
+std::string getInfoportString(placerStruct_t *placerStruct)
+{
+    std::stringstream stringStream;
+
+    stringStream << "Temperature: " << placerStruct->temperature << " Total half perimeter: " << placerStruct->totalHalfPerim << std::endl;
+
+    return stringStream.str();
+}
+
+double calculateStandardDeviation(std::vector<int> dataSet)
+{
+    unsigned int i, dataSetSize;
+    double temp, mean, stdDev;
+
+    dataSetSize = static_cast<unsigned int>(dataSet.size());
+
+    // First calculate the mean
+    temp = 0;
+    for(i = 0; i < dataSetSize; i++)
+    {
+        temp += dataSet[i];
+    }
+    mean = temp / dataSetSize;
+
+    // Now use the mean to calculate the standard deviation
+    temp = 0;
+    for(i = 0; i < dataSetSize; i++)
+    {
+        temp += pow(dataSet[i] - mean, 2.0);
+    }
+    stdDev = sqrt(temp / (dataSetSize - 1));
+
+    return stdDev;
+}
+
+double calculateNewTemp(double oldTemp, double stdDev, temperatureDecrease_e mode)
+{
+    double newTemp;
+
+    // Linear decrease of temperature
+    if(mode == TEMP_DECREASE_LINEAR)
+    {
+        newTemp = TEMP_LINEAR_COEFFICIENT * oldTemp;
+    }
+    // Exponential decrease of temperature
+    else if(mode == TEMP_DECREASE_EXP)
+    {
+        newTemp = oldTemp * exp(-0.7 * oldTemp/stdDev);
+    }
+    // Unknown temperature decrease mode, old = new
+    else
+    {
+        newTemp = oldTemp;
+    }
+
+    return newTemp;
+}
+
+float calculateAcceptanceRate(std::vector<bool> acceptanceTracker)
+{
+    unsigned int i, count;
+
+    // Count how many have been accepted
+    count = 0;
+    for(i = 0; i < acceptanceTracker.size(); i++)
+    {
+        if(acceptanceTracker[i])
+        {
+            count++;
+        }
+    }
+
+    // Return the ratio
+    return static_cast<float>(count) / static_cast<float>(acceptanceTracker.size());
+}
+
+unsigned int calculateTotalHalfPerim(std::vector<netStruct_t> &nets)
+{
+    unsigned int i, j, minX, maxX, minY, maxY, totalHalfPerim;
+    cellStruct_t *cellPointer;
+
+    totalHalfPerim = 0;
+
+    for(i = 0; i < nets.size(); i++)
+    {
+        // Reset our min max
+        minX = 0xDEADBEEF;
+        maxX = 0;
+        minY = 0xDEADBEEF;
+        maxY = 0;
+
+        // Go through the connections and record the minimum and maximums in each direction
+        for(j = 0; j < nets[i].connections.size(); j++)
+        {
+            cellPointer = nets[i].connections[j];
+            if(cellPointer->pos.col > maxX)
+            {
+                maxX = cellPointer->pos.col;
+            }
+            if(cellPointer->pos.col < minX)
+            {
+                minX = cellPointer->pos.col;
+            }
+            if(cellPointer->pos.row > maxY)
+            {
+                maxY = cellPointer->pos.col;
+            }
+            if(cellPointer->pos.row < minY)
+            {
+                minY = cellPointer->pos.col;
+            }
+        }
+
+        // Now that we have min and max, add the half perimeter to the total
+        totalHalfPerim += ((maxX - minX) + (maxY - minY));
+    }
+
+    return totalHalfPerim;
 }
