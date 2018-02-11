@@ -95,9 +95,12 @@ typedef struct
 
 // Constants for simulated annealing
 #define TEMP_LINEAR_COEFFICIENT                 0.9                     ///< Temperature decrease linear coefficient
+#define START_TEMP_STD_MULT                     10                      ///< Multiplier to the standard deviation for start temperature
 
 typedef struct
 {
+    char                                        *filename;              ///< Current filename
+
     float                                       cellSize;               ///< Current cellsize
     float                                       cellOffset;             ///< Cell offset for maximized dimension
     float                                       cellOppositeOffset;     ///< Cell offset for other dimension
@@ -112,7 +115,8 @@ typedef struct
     unsigned int                                currentMove;            ///< Current move
     unsigned int                                currentHalfPerimSum;    ///< Current half perimeter sum
     unsigned int                                startingHalfPerimSum;   ///< Starting half perimeter sum
-    double                                      temperature;            ///< Current simulated annealing temperature
+    double                                      startTemperature;       ///< Start temperature for simulated annealing
+    double                                      currentTemperature;     ///< Current temperature for simulated annealing
     unsigned int                                totalTempDecrements;    ///< Count the number of temperature decrements so far
     std::vector<bool>                           acceptanceTracker;      ///< Keeps track of what's been accepted
     std::vector<int>                            costTracker;            ///< Keeps track of the cost
@@ -127,7 +131,7 @@ drawPosStruct_t getGridCellCoordinate(placerStruct_t *placerStruct, unsigned int
 void updateCellPosition(placerStruct_t *placerStruct, cellStruct_t *cell, unsigned int col, unsigned int row);
 void generateCellConnections(parsedInputStruct_t *inputStruct, placerStruct_t *placerStruct);
 void generateGridModel(unsigned int numCols, unsigned int numRows, placerStruct_t *placerStruct);
-void generateCells(unsigned int numCells, placerStruct_t *placerStruct);
+void generateCells(unsigned int totalCells, unsigned int numCells, placerStruct_t *placerStruct);
 void generateCellPlacement(unsigned int numCols, unsigned int numRows, placerStruct_t *placerStruct);
 void updateCellNet(std::vector<netStruct_t> &nets);
 void swapCells(cellStruct_t *cell0, cellStruct_t *cell1, placerStruct_t *placerStruct);

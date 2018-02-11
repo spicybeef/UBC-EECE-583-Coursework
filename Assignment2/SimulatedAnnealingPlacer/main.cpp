@@ -20,8 +20,8 @@ int main(int argc, char **argv)
 {
     unsigned int i, swapCount;
 	// File handling
-    char * filename = argv[1];
-    //const char * filename = "..\\benchmarks\\apex4.txt";
+    placer->filename = argv[1];
+    //placer->filename = const_cast<char *>("..\\..\\benchmarks\\cm151a.txt");
 	// Viewport size
     const sf::Vector2u viewportSize(
         static_cast<unsigned int>(WIN_VIEWPORT_WIDTH),
@@ -41,7 +41,7 @@ int main(int argc, char **argv)
     // Log
     sf::Font font;
     sf::Text text;
-    font.loadFromFile("C:\\Windows\\Fonts\\consola.ttf");
+    font.loadFromFile("consola.ttf");
     text.setFont(font);
     text.setCharacterSize(17);
     text.setFillColor(sf::Color::Green);
@@ -56,16 +56,16 @@ int main(int argc, char **argv)
     };
 
     // Filename to read in is the second argument
-    std::ifstream myfile(filename, std::ios::in);
+    std::ifstream myfile(placer->filename, std::ios::in);
 
     // Check if file was opened properly
     if(myfile.is_open())
     {
-        std::cout << "File " << filename << " opened! Here's what's in it:" << std::endl;
+        std::cout << "File " << placer->filename << " opened! Here's what's in it:" << std::endl;
     }
     else
     {
-        std::cout << "FATAL ERROR! File " << filename << " could not be opened!" << std::endl;
+        std::cout << "FATAL ERROR! File " << placer->filename << " could not be opened!" << std::endl;
         return -1;
     }
 
@@ -76,7 +76,7 @@ int main(int argc, char **argv)
     backgroundGrid = generateGrid(input, placer);
 
 	// Push back enough cells for the nets
-	generateCells(input->numCells, placer);
+	generateCells(input->numCols * input->numRows, input->numCells, placer);
 	// Connect them via their nets
 	generateCellConnections(input, placer);
 
@@ -194,8 +194,9 @@ void doSimulatedAnnealing(placerStruct_t *placerStruct)
             standardDev = calculateStandardDeviation(placerStruct->costTracker);
 
             std::cout << "Standard deviation is " << standardDev << std::endl;
-            placerStruct->temperature = standardDev * 10;
-            std::cout << "Starting temperature is " << placerStruct->temperature;
+            placerStruct->startTemperature = standardDev * START_TEMP_STD_MULT;
+            placerStruct->currentTemperature = standardDev * START_TEMP_STD_MULT;
+            std::cout << "Starting temperature is " << placerStruct->currentTemperature;
             
             // Reset cost tracker
             placerStruct->costTracker.clear();
@@ -216,7 +217,7 @@ void doSimulatedAnnealing(placerStruct_t *placerStruct)
                 // Determine the standard deviation
                 standardDev = calculateStandardDeviation(placerStruct->costTracker);
                 // Calculate the new temperature
-                placerStruct->temperature = calculateNewTemp(placerStruct->temperature, standardDev, TEMP_DECREASE_LINEAR);
+                placerStruct->currentTemperature = calculateNewTemp(placerStruct->currentTemperature, standardDev, TEMP_DECREASE_LINEAR);
                 // Increment the temperature
                 placerStruct->totalTempDecrements++;
                 // Reset the cost tracker
@@ -241,11 +242,11 @@ void doSimulatedAnnealing(placerStruct_t *placerStruct)
                 cost = newHalfPerimSum - oldHalfPerimSum;
 
                 // If this was a bad move, if so, check if we are going to accept it
-                if(newHalfPerimSum > oldHalfPerimSum)
+                if(newHalfPerimSum >= oldHalfPerimSum)
                 {
                     randomDouble = getRandomDouble();
                     // Check if we accept swap
-                    if(randomDouble < exp(-1.0 * static_cast<double>(cost) / placerStruct->temperature))
+                    if(randomDouble < exp(-1.0 * static_cast<double>(cost) / placerStruct->currentTemperature))
                     {
                         // Accept the swap!
                         acceptSwap = true;
@@ -451,7 +452,7 @@ void generateGridModel(unsigned int numCols, unsigned int numRows, placerStruct_
     }
 }
 
-void generateCells(unsigned int numCells, placerStruct_t *placerStruct)
+void generateCells(unsigned int totalCells, unsigned int numCells, placerStruct_t *placerStruct)
 {
 	unsigned int i;
 
@@ -464,6 +465,19 @@ void generateCells(unsigned int numCells, placerStruct_t *placerStruct)
         placerStruct->cells.push_back(cellStruct_t());
 		// Give it an ID
         placerStruct->cells.back().id = i;
+        // Null the net pointer
+        placerStruct->cells.back().cellNet = NULL;
+    }
+
+    // Add some dummy cells
+    for(i = 0; i < (totalCells - numCells); i++)
+    {
+        // Add a dummy cell
+        placerStruct->cells.push_back(cellStruct_t());
+        // Give it an ID
+        placerStruct->cells.back().id = numCells + i;
+        // Null the net pointer
+        placerStruct->cells.back().cellNet = NULL;
     }
 }
 
@@ -542,6 +556,12 @@ void updateNetColor(cellStruct_t &cell)
     unsigned int currentHalfPerim, maxHalfPerim, rgb[3];
     sf::Color newColor;
     netStruct_t *netPointer = cell.cellNet;
+
+    // Nothing to do if the cell doesn't have a net
+    if(netPointer == NULL)
+    {
+        return;
+    }
 
     maxHalfPerim = netPointer->maxHalfPerim;
     // Calculate the half perimeter of the net
@@ -665,13 +685,32 @@ std::string getInfoportString(placerStruct_t *placerStruct)
     difference = static_cast<int>(placerStruct->startingHalfPerimSum) - static_cast<int>(placerStruct->currentHalfPerimSum);
 
     stringStream << std::fixed << std::setprecision(3);
-    stringStream << "Temperature: " << std::setw(12) << placerStruct->temperature << "   ";
+    stringStream << "Temperature: " << std::setw(12) << placerStruct->currentTemperature << "   ";
     stringStream << "StartHPS:    " << std::setw(12) << placerStruct->startingHalfPerimSum << "   ";
     stringStream << "CurrentHPS:  " << std::setw(12) << placerStruct->currentHalfPerimSum << "   ";
     stringStream << "Improvement: " << std::setw(11) << 100.0 * static_cast<double>(difference) / static_cast<double>(placerStruct->startingHalfPerimSum) << "%   " << std::endl;
+    stringStream << "Start Temp:  " << std::setw(12) << placerStruct->startTemperature << "   ";
     stringStream << "Decrements:  " << std::setw(12) << placerStruct->totalTempDecrements << "   ";
     stringStream << "Move:       "  << std::setw(6) << placerStruct->currentMove << "/" << std::setw(6) << placerStruct->movesPerTempDec << "   ";
     stringStream << "Acceptance:  " << std::setw(11) << 100.0 * calculateAcceptanceRate(placerStruct->acceptanceTracker) << "%   ";
+    stringStream << std::endl;
+    stringStream << "State:       ";
+    switch(placerStruct->currentState)
+    {
+        case STATE_START:
+            stringStream << "Starting placer!";
+            break;
+        case STATE_ANNEALING:
+            stringStream << "Annealing...";
+            break;
+        case STATE_FINISHED:
+            stringStream << "Finished!";
+            break;
+        default:
+            break;
+    }
+    stringStream << std::endl;
+    stringStream << "Filename:    " << placer->filename;
 
     return stringStream.str();
 }
