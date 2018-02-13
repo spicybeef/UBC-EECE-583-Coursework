@@ -28,6 +28,7 @@ int main(int argc, char **argv)
         static_cast<unsigned int>(WIN_VIEWPORT_HEIGHT));
 	// Drawing components
     std::vector<sf::RectangleShape> backgroundGrid;
+	std::vector<sf::RectangleShape> placedCells;
     std::vector<sf::Vertex> netLines;
 
     // Seed our randomizer with the current time
@@ -42,6 +43,7 @@ int main(int argc, char **argv)
     sf::Font font;
     sf::Text text;
     font.loadFromFile("consola.ttf");
+	//font.loadFromFile("C:\\Windows\\Fonts\\consola.ttf");
     text.setFont(font);
     text.setCharacterSize(17);
     text.setFillColor(sf::Color::Green);
@@ -97,7 +99,7 @@ int main(int argc, char **argv)
     sf::RenderWindow window(sf::VideoMode(
         static_cast<unsigned int>(WIN_VIEWPORT_WIDTH),
         static_cast<unsigned int>(WIN_VIEWPORT_HEIGHT)),
-        "Simulated Annealing Placer", sf::Style::Titlebar | sf::Style::Close);
+        "Simulated Annealing Placer", sf::Style::Titlebar | sf::Style::Close | sf::Style::Resize);
     window.setView(calcView(window.getSize(), viewportSize));
 
 	// Do simulated annealing and output results
@@ -128,6 +130,8 @@ int main(int argc, char **argv)
 
         // Get net lines
         netLines = generateNetLines(placer);
+		// Get placed cells
+		placedCells = generatePlacedCells(placer->cells, placer->maximizedDim, placer->cellSize, placer->cellOffset, placer->cellOppositeOffset, placer->currentState);
 
 		// Clear window
         window.clear();
@@ -144,6 +148,11 @@ int main(int argc, char **argv)
             window.draw(backgroundGrid[i]);
         }
 
+		// Draw placed cells
+		for (i = 0; i < placedCells.size(); i++)
+		{
+			window.draw(placedCells[i]);
+		}
         // Draw net lines
         window.draw(&netLines.front(), netLines.size(), sf::Lines);
 
@@ -164,13 +173,14 @@ void doSimulatedAnnealing(placerStruct_t *placerStruct)
     switch(placerStruct->currentState)
     {
         case STATE_START:
+			placerStruct->startTime = clock();
             placerStruct->totalTempDecrements = 0;
             placerStruct->costTracker.clear();
             placerStruct->acceptanceTracker.clear();
             // Determine moves per temperature decrease 10 * N^(4/3)
             placerStruct->movesPerTempDec = static_cast<unsigned int>(10.0 * pow(static_cast<double>(placer->cells.size()), 4.0 / 3.0));
-            std::cout << "For " << placer->cells.size() << " cells, each temperature decrement will have ";
-            std::cout << placerStruct->movesPerTempDec << " moves" << std::endl;
+            //std::cout << "For " << placer->cells.size() << " cells, each temperature decrement will have ";
+            //std::cout << placerStruct->movesPerTempDec << " moves" << std::endl;
             // Obtain the initial total half perimeter
             placerStruct->startingHalfPerimSum = calculateTotalHalfPerim(placerStruct->nets);
             // Determine the initial temperature
@@ -187,16 +197,16 @@ void doSimulatedAnnealing(placerStruct_t *placerStruct)
                 // Record the new total half perimeter
                 newHalfPerimSum = calculateTotalHalfPerim(placerStruct->nets);
                 // Push back cost
-                std::cout << "Cost of swap " << i << " was " << newHalfPerimSum - oldHalfPerimSum << std::endl;
+                //std::cout << "Cost of swap " << i << " was " << newHalfPerimSum - oldHalfPerimSum << std::endl;
                 placerStruct->costTracker.push_back(newHalfPerimSum - oldHalfPerimSum);
             }
             // Calculate the standard deviation, this is used for the initial temperature
             standardDev = calculateStandardDeviation(placerStruct->costTracker);
 
-            std::cout << "Standard deviation is " << standardDev << std::endl;
+            //std::cout << "Standard deviation is " << standardDev << std::endl;
             placerStruct->startTemperature = standardDev * START_TEMP_STD_MULT;
             placerStruct->currentTemperature = standardDev * START_TEMP_STD_MULT;
-            std::cout << "Starting temperature is " << placerStruct->currentTemperature;
+            //std::cout << "Starting temperature is " << placerStruct->currentTemperature;
             
             // Reset cost tracker
             placerStruct->costTracker.clear();
@@ -217,13 +227,24 @@ void doSimulatedAnnealing(placerStruct_t *placerStruct)
                 // Determine the standard deviation
                 standardDev = calculateStandardDeviation(placerStruct->costTracker);
                 // Calculate the new temperature
-                placerStruct->currentTemperature = calculateNewTemp(placerStruct->currentTemperature, standardDev, TEMP_DECREASE_LINEAR);
+                placerStruct->currentTemperature = calculateNewTemp(placerStruct->currentTemperature, standardDev, TEMP_DECREASE_EXP);
                 // Increment the temperature
                 placerStruct->totalTempDecrements++;
                 // Reset the cost tracker
                 placerStruct->costTracker.clear();
-                // Reset the acceptance tracker
-                placerStruct->acceptanceTracker.clear();
+				// Check if we haven't accepted anything this past temperature decrement
+				if (calculateAcceptanceRate(placerStruct->acceptanceTracker) <= ACCEPTANCE_RATE_CUTOFF)
+				{
+					// We're done!
+					placerStruct->currentState = STATE_FINISHED;
+					// Record finish time
+					placerStruct->endTime = clock();
+				}
+				else
+				{
+					// Reset the acceptance tracker
+					placerStruct->acceptanceTracker.clear();
+				}
             }
             // We still have swaps to do
             else
@@ -237,6 +258,11 @@ void doSimulatedAnnealing(placerStruct_t *placerStruct)
                 swapCells(&placerStruct->cells[randPicks[0]], &placerStruct->cells[randPicks[1]], placerStruct);
                 // Record the new total half perimeter
                 newHalfPerimSum = calculateTotalHalfPerim(placerStruct->nets);
+				// If it's worse than our current worse, store it
+				if (static_cast<unsigned int>(newHalfPerimSum) > placerStruct->startingHalfPerimSum)
+				{
+					placerStruct->startingHalfPerimSum = newHalfPerimSum;
+				}
 
                 // calculate cost
                 cost = newHalfPerimSum - oldHalfPerimSum;
@@ -245,8 +271,17 @@ void doSimulatedAnnealing(placerStruct_t *placerStruct)
                 if(newHalfPerimSum >= oldHalfPerimSum)
                 {
                     randomDouble = getRandomDouble();
+					//std::cout << "Random double: " << randomDouble << " ";
                     // Check if we accept swap
-                    if(randomDouble < exp(-1.0 * static_cast<double>(cost) / placerStruct->currentTemperature))
+					//std::cout << "Cost: " << static_cast<double>(cost) << " ";
+					//std::cout << "Swap exp: " << exp(-1.0 * static_cast<double>(cost) / placerStruct->currentTemperature) << std::endl;
+					if (cost == 0)
+					{
+						// No point in doing this
+						// Revert cell swap
+						swapCells(&placerStruct->cells[randPicks[0]], &placerStruct->cells[randPicks[1]], placerStruct);
+					}
+                    else if(randomDouble < exp(-1.0 * static_cast<double>(cost) / placerStruct->currentTemperature))
                     {
                         // Accept the swap!
                         acceptSwap = true;
@@ -677,6 +712,50 @@ std::vector<sf::RectangleShape> generateGrid(parsedInputStruct_t *inputStruct, p
     return grid;
 }
 
+std::vector<sf::RectangleShape> generatePlacedCells(std::vector<cellStruct_t> &cells, dimension_e maximizedDim, float cellSize, float cellOffset, float cellOppositeOffset, state_e state)
+{
+	std::vector<sf::RectangleShape> placedCells;
+	unsigned int i;
+
+	for (i = 0; i < cells.size(); i++)
+	{
+		// Only look at cells with nets
+		if (cells[i].cellNet == NULL)
+		{
+			continue;
+		}
+
+		placedCells.push_back(sf::RectangleShape());
+
+		if (maximizedDim == DIM_VERTICAL)
+		{
+			placedCells.back().setPosition(
+				static_cast<float>((cells[i].pos.col * cellSize) + cellOppositeOffset),
+				static_cast<float>((cells[i].pos.row * cellSize) + cellOffset)
+			);
+		}
+		else
+		{
+			placedCells.back().setPosition(
+				static_cast<float>((cells[i].pos.col * cellSize) + cellOffset),
+				static_cast<float>((cells[i].pos.row * cellSize) + cellOppositeOffset)
+			);
+		}
+		placedCells.back().setSize(sf::Vector2f(cellSize * CELL_SHRINK_FACTOR, cellSize * CELL_SHRINK_FACTOR));
+		placedCells.back().setOrigin(sf::Vector2f(cellSize * CELL_SHRINK_FACTOR * 0.5f, cellSize * CELL_SHRINK_FACTOR * 0.5f));
+		if (state == STATE_ANNEALING)
+		{
+			placedCells.back().setFillColor(sf::Color(180, 180, 180, 255));
+		}
+		else
+		{
+			placedCells.back().setFillColor(sf::Color(160, 193, 165, 255));
+		}
+	}
+
+	return placedCells;
+}
+
 std::string getInfoportString(placerStruct_t *placerStruct)
 {
     std::stringstream stringStream;
@@ -685,13 +764,13 @@ std::string getInfoportString(placerStruct_t *placerStruct)
     difference = static_cast<int>(placerStruct->startingHalfPerimSum) - static_cast<int>(placerStruct->currentHalfPerimSum);
 
     stringStream << std::fixed << std::setprecision(3);
-    stringStream << "Temperature: " << std::setw(12) << placerStruct->currentTemperature << "   ";
-    stringStream << "StartHPS:    " << std::setw(12) << placerStruct->startingHalfPerimSum << "   ";
-    stringStream << "CurrentHPS:  " << std::setw(12) << placerStruct->currentHalfPerimSum << "   ";
+    stringStream << "Curr Temp:   " << std::setw(12) << placerStruct->currentTemperature << "   ";
+    stringStream << "Worst HPS:   " << std::setw(12) << placerStruct->startingHalfPerimSum << "   ";
+    stringStream << "Current HPS: " << std::setw(12) << placerStruct->currentHalfPerimSum << "   ";
     stringStream << "Improvement: " << std::setw(11) << 100.0 * static_cast<double>(difference) / static_cast<double>(placerStruct->startingHalfPerimSum) << "%   " << std::endl;
     stringStream << "Start Temp:  " << std::setw(12) << placerStruct->startTemperature << "   ";
     stringStream << "Decrements:  " << std::setw(12) << placerStruct->totalTempDecrements << "   ";
-    stringStream << "Move:       "  << std::setw(6) << placerStruct->currentMove << "/" << std::setw(6) << placerStruct->movesPerTempDec << "   ";
+    stringStream << "Swap:       " << std::setw(6) << placerStruct->currentMove << "/" << std::setw(6) << placerStruct->movesPerTempDec << "   ";
     stringStream << "Acceptance:  " << std::setw(11) << 100.0 * calculateAcceptanceRate(placerStruct->acceptanceTracker) << "%   ";
     stringStream << std::endl;
     stringStream << "State:       ";
@@ -701,15 +780,14 @@ std::string getInfoportString(placerStruct_t *placerStruct)
             stringStream << "Starting placer!";
             break;
         case STATE_ANNEALING:
-            stringStream << "Annealing...";
+			stringStream << "Annealing...   Elapsed time: " << std::setw(10) << (clock() - placerStruct->startTime) / 1000 << "s" << std::endl;
             break;
         case STATE_FINISHED:
-            stringStream << "Finished!";
+			stringStream << "* Finished! *  Elapsed time: " << std::setw(10) << (placerStruct->endTime - placerStruct->startTime) / 1000 << "s" << std::endl;
             break;
         default:
             break;
     }
-    stringStream << std::endl;
     stringStream << "Filename:    " << placer->filename;
 
     return stringStream.str();
@@ -736,7 +814,17 @@ double calculateStandardDeviation(std::vector<int> dataSet)
     {
         temp += pow(dataSet[i] - mean, 2.0);
     }
-    stdDev = sqrt(temp / (dataSetSize - 1));
+
+	if(temp == 0.0)
+	{
+		stdDev = 0.0;
+	}
+	else
+	{
+		stdDev = sqrt(temp / (dataSetSize - 1));
+	}
+
+	//std::cout << "Temp: " << temp << " size: " << dataSetSize << std::endl;
 
     return stdDev;
 }
@@ -753,7 +841,15 @@ double calculateNewTemp(double oldTemp, double stdDev, temperatureDecrease_e mod
     // Exponential decrease of temperature
     else if(mode == TEMP_DECREASE_EXP)
     {
-        newTemp = oldTemp * exp(-0.7 * oldTemp/stdDev);
+		//std::cout << "Last temperature std dev: " << stdDev << std::endl;
+		if (stdDev == 0.0)
+		{
+			newTemp = 0.0;
+		}
+		else
+		{
+			newTemp = oldTemp * exp(-0.2 * oldTemp / stdDev);
+		}
     }
     // Unknown temperature decrease mode, old = new
     else

@@ -18,6 +18,7 @@
 #define WIN_INFOPORT_PADDING                    10.f
 // Grid constants
 #define GRID_SHRINK_FACTOR                      0.8f
+#define CELL_SHRINK_FACTOR						0.7f
 // typedef helpers to make things legible
 typedef std::vector<std::vector<unsigned int>>	netVec;
 
@@ -96,6 +97,7 @@ typedef struct
 // Constants for simulated annealing
 #define TEMP_LINEAR_COEFFICIENT                 0.9                     ///< Temperature decrease linear coefficient
 #define START_TEMP_STD_MULT                     10                      ///< Multiplier to the standard deviation for start temperature
+#define ACCEPTANCE_RATE_CUTOFF					0.0010					///< The acceptance rate cutoff for when to stop annealling
 
 typedef struct
 {
@@ -110,6 +112,8 @@ typedef struct
     std::vector<cellStruct_t>                   cells;                  ///< Cells
     std::vector<netStruct_t>                    nets;                   ///< Nets
 
+	clock_t										startTime;				///< Start time for annealing
+	clock_t										endTime;				///< End time for annealing
     state_e                                     currentState;           ///< Current simulated annealing state
     unsigned int                                movesPerTempDec;        ///< Number of swaps to perform per temperature step
     unsigned int                                currentMove;            ///< Current move
@@ -140,6 +144,7 @@ void updateNetColor(cellStruct_t &cell);
 
 std::vector<sf::Vertex> generateNetLines(placerStruct_t *placerStruct);
 std::vector<sf::RectangleShape> generateGrid(parsedInputStruct_t *inputStruct, placerStruct_t *placerStruct);
+std::vector<sf::RectangleShape> generatePlacedCells(std::vector<cellStruct_t> &cells, dimension_e maximizedDim, float cellSize, float cellOffset, float cellOppositeOffset, state_e state);
 std::vector<std::string> splitString(std::string inString, char delimiter);
 sf::View calcView(const sf::Vector2u &windowsize, const sf::Vector2u &designedsize);
 
