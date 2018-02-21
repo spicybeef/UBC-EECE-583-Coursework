@@ -22,16 +22,16 @@
 // typedef helpers to make things legible
 typedef std::vector<std::vector<unsigned int>>	netVec;
 
-// Simulated annealing states enum
+// partitioning states enum
 typedef enum
 {
     STATE_START = 0,
-    STATE_ANNEALING,
+    STATE_PARTITIONING,
     STATE_FINISHED,
     STATE_NUM
 } state_e;
 
-// Simulated annealing temperature decrease type
+// partitioning temperature decrease type
 typedef enum
 {
     TEMP_DECREASE_LINEAR = 0,
@@ -62,24 +62,24 @@ typedef struct
 
 // Forward declarations since net and cell structs reference each other
 typedef struct Net netStruct_t;
-typedef struct Cell cellStruct_t;
+typedef struct Node nodeStruct_t;
 
 // Net struct
 typedef struct Net
 {
-    std::vector<cellStruct_t*>                  connections;            ///< Pointers to the cell's connections
-    unsigned int                                maxHalfPerim;           ///< Maximum half perimeter of the net
+    std::vector<nodeStruct_t*>                  connections;            ///< Pointers to the cell's connections
 	sf::Color									color;				    ///< Net color
 } netStruct_t;
 
 // Cell struct
-typedef struct Cell
+typedef struct Node
 {
     unsigned int                                id;                     ///< Block ID
     posStruct_t                                 pos;                    ///< Current position of the cell
     drawPosStruct_t                             drawPos;                ///< Current drawing position of the cell's center
-    netStruct_t                                 *cellNet;               ///< A pointer to the cell's net, for easy reference
-} cellStruct_t;
+    netStruct_t                                 *nodeNet;               ///< A pointer to the cell's net, for easy reference
+	std::vector<nodeStruct_t*>					neighbours;				///< Pointers to the cell's neighbours
+} nodeStruct_t;
 
 // Parsed input struct
 typedef struct
@@ -87,71 +87,67 @@ typedef struct
     unsigned int                                numRows;                ///< Number of parsed rows
     unsigned int                                numCols;                ///< Number of parsed columns
 
-    unsigned int                                numCells;               ///< Number of cells to place
+    unsigned int                                numNodes;               ///< Number of nodes to place
     unsigned int                                numConnections;         ///< The number of connections
 
 	netVec                                      nets;                   ///< Parsed nets
 
 } parsedInputStruct_t;
 
-// Constants for simulated annealing
-#define TEMP_LINEAR_COEFFICIENT                 0.9                     ///< Temperature decrease linear coefficient
-#define START_TEMP_STD_MULT                     10                      ///< Multiplier to the standard deviation for start temperature
-#define ACCEPTANCE_RATE_CUTOFF					0.0010					///< The acceptance rate cutoff for when to stop annealling
+typedef struct
+{
+	unsigned int                                numRows;                ///< Number of rows
+	unsigned int                                numCols;                ///< Number of columns
 
+	float                                       cellSize;               ///< Current cellsize
+	float                                       cellOffset;             ///< Cell offset for maximized dimension
+	float                                       cellOppositeOffset;     ///< Cell offset for other dimension
+	dimension_e                                 maximizedDim;           ///< Current maximized dimension
+} cellPropertiesStruct_t;
+
+// Constants for the partitioner
 typedef struct
 {
     char                                        *filename;              ///< Current filename
 
-    float                                       cellSize;               ///< Current cellsize
-    float                                       cellOffset;             ///< Cell offset for maximized dimension
-    float                                       cellOppositeOffset;     ///< Cell offset for other dimension
-    dimension_e                                 maximizedDim;           ///< Current maximized dimension
+	cellPropertiesStruct_t						cellProperties;			///< Grid cell properties
 
-    std::vector<std::vector<cellStruct_t*>>     grid;                   ///< Grid containing pointers to cells
-    std::vector<cellStruct_t>                   cells;                  ///< Cells
+    std::vector<std::vector<nodeStruct_t*>>     grid;                   ///< Grid containing pointers to nodes
+    std::vector<nodeStruct_t>                   nodes;                  ///< Nodes
     std::vector<netStruct_t>                    nets;                   ///< Nets
 
-	clock_t										startTime;				///< Start time for annealing
-	clock_t										endTime;				///< End time for annealing
-    state_e                                     currentState;           ///< Current simulated annealing state
-    unsigned int                                movesPerTempDec;        ///< Number of swaps to perform per temperature step
-    unsigned int                                currentMove;            ///< Current move
-    unsigned int                                currentHalfPerimSum;    ///< Current half perimeter sum
-    unsigned int                                startingHalfPerimSum;   ///< Starting half perimeter sum
-    double                                      startTemperature;       ///< Start temperature for simulated annealing
-    double                                      currentTemperature;     ///< Current temperature for simulated annealing
-    unsigned int                                totalTempDecrements;    ///< Count the number of temperature decrements so far
-    std::vector<bool>                           acceptanceTracker;      ///< Keeps track of what's been accepted
-    std::vector<int>                            costTracker;            ///< Keeps track of the cost
-} placerStruct_t;
+	clock_t										starttime;				///< start time for annealing
+	clock_t										endtime;				///< end time for annealing
+    state_e                                     currentState;           ///< Current partitioning state
 
-void doSimulatedAnnealing(placerStruct_t *placerStruct);
+} partitionerStruct_t;
 
+void doPartitioning(partitionerStruct_t *partitionerStruct);
+
+// Input file parser
 bool parseInputFile(std::ifstream *inputFile, parsedInputStruct_t *inputStruct);
+
+drawPosStruct_t getGridCellCoordinate(cellPropertiesStruct_t cellProperties, unsigned int col, unsigned int row);
+void updateNodePosition(cellPropertiesStruct_t cellProperties, nodeStruct_t &node, std::vector<std::vector<nodeStruct_t*>> &grid, unsigned int col, unsigned int row);
+void generateNodeConnections(parsedInputStruct_t *inputStruct, partitionerStruct_t *partitionerStruct);
+
+void generateNodes(unsigned int totalNodes, unsigned int numNodes, partitionerStruct_t *partitionerStruct);
+void generateNodePlacement(unsigned int numCols, unsigned int numRows, cellPropertiesStruct_t cellProperties);
+
+std::vector<std::vector<nodeStruct_t*>> initializeGridModel(unsigned int numCols, unsigned int numRows, partitionerStruct_t *partitionerStruct);
+void initializeNodeNet(std::vector<netStruct_t> &nets);
+void initializeNetColors(std::vector<netStruct_t> &nets, unsigned int col, unsigned int row);
+void updateNetColor(nodeStruct_t &node);
+
+// These functions create the SFML primitives used to draw the partitioner
+std::vector<sf::Vertex> generateNetGeometries(std::vector<netStruct_t> &nets);
+std::vector<sf::RectangleShape> generatePlacedNodeGeometries(std::vector<nodeStruct_t> &cells, dimension_e maximizedDim, float cellSize, float cellOffset, float cellOppositeOffset, state_e state);
+std::vector<sf::RectangleShape> generateGridGeometries(parsedInputStruct_t *inputStruct, partitionerStruct_t *partitionerStruct);
+
+// Utility functions
 int getRandomInt(int i);
 double getRandomDouble(void);
-drawPosStruct_t getGridCellCoordinate(placerStruct_t *placerStruct, unsigned int col, unsigned int row);
-void updateCellPosition(placerStruct_t *placerStruct, cellStruct_t *cell, unsigned int col, unsigned int row);
-void generateCellConnections(parsedInputStruct_t *inputStruct, placerStruct_t *placerStruct);
-void generateGridModel(unsigned int numCols, unsigned int numRows, placerStruct_t *placerStruct);
-void generateCells(unsigned int totalCells, unsigned int numCells, placerStruct_t *placerStruct);
-void generateCellPlacement(unsigned int numCols, unsigned int numRows, placerStruct_t *placerStruct);
-void updateCellNet(std::vector<netStruct_t> &nets);
-void swapCells(cellStruct_t *cell0, cellStruct_t *cell1, placerStruct_t *placerStruct);
-void initializeNetColors(std::vector<netStruct_t> &nets, unsigned int col, unsigned int row);
-void updateNetColor(cellStruct_t &cell);
-
-std::vector<sf::Vertex> generateNetLines(placerStruct_t *placerStruct);
-std::vector<sf::RectangleShape> generateGrid(parsedInputStruct_t *inputStruct, placerStruct_t *placerStruct);
-std::vector<sf::RectangleShape> generatePlacedCells(std::vector<cellStruct_t> &cells, dimension_e maximizedDim, float cellSize, float cellOffset, float cellOppositeOffset, state_e state);
 std::vector<std::string> splitString(std::string inString, char delimiter);
 sf::View calcView(const sf::Vector2u &windowsize, const sf::Vector2u &designedsize);
-
-std::string getInfoportString(placerStruct_t *placerStruct);
-
 double calculateStandardDeviation(std::vector<int> dataSet);
-double calculateNewTemp(double oldTemp, double stdDev, temperatureDecrease_e mode);
-float calculateAcceptanceRate(std::vector<bool> acceptanceTracker);
-unsigned int calculateHalfPerim(netStruct_t &net);
-unsigned int calculateTotalHalfPerim(std::vector<netStruct_t> &nets);
+std::string getInfoportString(partitionerStruct_t *partitionerStruct);
