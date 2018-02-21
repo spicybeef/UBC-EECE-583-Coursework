@@ -11,7 +11,7 @@
 #include <SFML/Graphics.hpp>
 
 // Program Includes
-#include "SAPlacer.h"
+#include "Partitioner.h"
 
 parsedInputStruct_t *input = new parsedInputStruct_t();
 placerStruct_t *placer = new placerStruct_t();
