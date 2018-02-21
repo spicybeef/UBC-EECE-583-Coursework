@@ -449,76 +449,6 @@ void updateNodePosition(cellPropertiesStruct_t cellProperties, nodeStruct_t &nod
 	grid[col][row] = &node;
 }
 
-void generateNodeConnections(parsedInputStruct_t *inputStruct, partitionerStruct_t *partitionerStruct)
-{
-    unsigned int i, j;
-    nodeStruct_t *cellPointer;
-
-	// Clear any existing nets
-    partitionerStruct->nets.clear();
-
-	// Go through the parsed input, and add each net
-    for(i = 0; i < inputStruct->nets.size(); i++)
-    {
-        // Push a fresh net to the placer
-        partitionerStruct->nets.push_back(netStruct_t());
-
-        for(j = 0; j < inputStruct->nets[i].size(); j++)
-        {
-            // Give the net its node references
-            cellPointer = &partitionerStruct->nodes[inputStruct->nets[i][j]];
-            partitionerStruct->nets.back().connections.push_back(cellPointer);
-        }
-    }
-}
-
-std::vector<std::vector<nodeStruct_t*>> initializeGridModel(unsigned int numCols, unsigned int numRows)
-{
-    unsigned int i, j;
-	std::vector<std::vector<nodeStruct_t*>> grid;
-
-    // Generate the grid model
-    for(i = 0; i < numCols; i++)
-    {
-        grid.push_back(std::vector<nodeStruct_t*>());
-        for(j = 0; j < numRows; j++)
-        {
-            grid[i].push_back(NULL);
-        }
-    }
-
-	return grid;
-}
-
-void generateNodes(unsigned int totalCells, unsigned int numCells, partitionerStruct_t *partitionerStruct)
-{
-	unsigned int i;
-
-    partitionerStruct->nodes.clear();
-
-	// For each cell
-    for(i = 0; i < numCells; i++)
-    {
-		// Add a cell
-        partitionerStruct->nodes.push_back(nodeStruct_t());
-		// Give it an ID
-        partitionerStruct->nodes.back().id = i;
-        // Null the net pointer
-        partitionerStruct->nodes.back().nodeNet = NULL;
-    }
-
-    // Add some dummy cells
-    for(i = 0; i < (totalCells - numCells); i++)
-    {
-        // Add a dummy cell
-        partitionerStruct->nodes.push_back(nodeStruct_t());
-        // Give it an ID
-        partitionerStruct->nodes.back().id = numCells + i;
-        // Null the net pointer
-        partitionerStruct->nodes.back().nodeNet = NULL;
-    }
-}
-
 void generateNodePlacement(unsigned int numCols, unsigned int numRows, cellPropertiesStruct_t cellProperties, std::vector<std::vector<nodeStruct_t*>> &grid, std::vector<nodeStruct_t> &nodes)
 {
 	unsigned int i, col, row;
@@ -536,20 +466,6 @@ void generateNodePlacement(unsigned int numCols, unsigned int numRows, cellPrope
 		// Update the cell's position
 		updateNodePosition(cellProperties, nodes[i], grid, col, row);
 	}
-}
-
-void initializeNodeNet(std::vector<netStruct_t> &nets)
-{
-    unsigned int i, j;
-
-    // Go through the nets and its connections, and update all of the nodes' nets
-    for(i = 0; i < nets.size(); i++)
-    {
-        for(j = 0; j < nets[i].connections.size(); j++)
-        {
-            nets[i].connections[j]->nodeNet = &nets[i];
-        }
-    }
 }
 
 void initializeNetColors(std::vector<netStruct_t> &nets, unsigned int col, unsigned int row)
@@ -577,38 +493,6 @@ void initializeNetColors(std::vector<netStruct_t> &nets, unsigned int col, unsig
     }
 }
 
-void updateNetColor(nodeStruct_t &cell)
-{
-    unsigned int currentHalfPerim, maxHalfPerim, rgb[3];
-    sf::Color newColor;
-    netStruct_t *netPointer = cell.nodeNet;
-
-    // Nothing to do if the cell doesn't have a net
-    if(netPointer == NULL)
-    {
-        return;
-    }
-
-    maxHalfPerim = netPointer->maxHalfPerim;
-    // Calculate the half perimeter of the net
-    currentHalfPerim = calculateHalfPerim(*netPointer);
-
-    // Interpolate the net's new color
-    // Blue| maxHalfPerim -> 1 |Red
-    rgb[0] = static_cast<unsigned int>(255.0 * static_cast<double>(currentHalfPerim) / static_cast<double>(maxHalfPerim));
-    rgb[1] = 0;
-    rgb[2] = static_cast<unsigned int>(255.0 * static_cast<double>(maxHalfPerim - currentHalfPerim) / static_cast<double>(maxHalfPerim));
-    newColor = sf::Color(rgb[0], rgb[1], rgb[2], 255);
-
-    //std::cout << maxHalfPerim << " " << currentHalfPerim << std::endl;
-    //std::cout << rgb[0] << " ";
-    //std::cout << rgb[1] << " ";
-    //std::cout << rgb[2] << std::endl;
-
-    // Update the net's color
-    netPointer->color = newColor;
-}
-
 std::vector<sf::Vertex> generateNetGeometries(std::vector<netStruct_t> &nets)
 {
     unsigned int i, j;
@@ -629,122 +513,6 @@ std::vector<sf::Vertex> generateNetGeometries(std::vector<netStruct_t> &nets)
     }
 
     return netLines;
-}
-
-std::vector<sf::RectangleShape> generateGridGeometries(cellPropertiesStruct_t cellProperties)
-{
-    std::vector<sf::RectangleShape> grid;
-    unsigned int i, j;
-    float rowToColRatio, graphicportRatio, cellSize, cellOffset, cellOppositeOffset;
-
-    // Determine the current row to column ratio
-    rowToColRatio = static_cast<float>(cellProperties.numRows)/static_cast<float>(cellProperties.numCols);
-    graphicportRatio = WIN_GRAPHICPORT_HEIGHT / WIN_GRAPHICPORT_WIDTH;
-    
-    // Determine which dimension gets maximized
-    if(rowToColRatio > graphicportRatio)
-    {
-        cellProperties.maximizedDim = DIM_VERTICAL;
-    }
-    else
-    {
-        cellProperties.maximizedDim = DIM_HORIZONTAL;
-    }
-
-    // Check which orientation gets maximized
-    if(cellProperties.maximizedDim == DIM_VERTICAL)
-    {
-        // Use rows to fill vertically
-        cellSize = WIN_GRAPHICPORT_HEIGHT / static_cast<float>(cellProperties.numRows);
-        // Cell offset is always half of cell size
-        cellOffset = cellSize / 2.f;
-        cellOppositeOffset = cellOffset + (WIN_GRAPHICPORT_WIDTH - static_cast<float>(cellProperties.numCols) * cellSize) / 2.f;
-    }
-    else
-    {
-        // Use columns to fill horizontally
-        cellSize = WIN_GRAPHICPORT_WIDTH / static_cast<float>(cellProperties.numCols);
-        // Cell offset is always half of cell size
-        cellOffset = cellSize / 2.f;
-        cellOppositeOffset = cellOffset + (WIN_GRAPHICPORT_HEIGHT - static_cast<float>(cellProperties.numRows) * cellSize) / 2.f;
-    }
-
-    // Save these for use later
-    cellProperties.cellSize = cellSize;
-    cellProperties.cellOffset = cellOffset;
-    cellProperties.cellOppositeOffset = cellOppositeOffset;
-
-    // Populate the grid vector with the data obtained above
-    for(i = 0; i < cellProperties.numCols; i++)
-    {
-        for(j = 0; j < cellProperties.numRows; j++)
-        {
-            grid.push_back(sf::RectangleShape());
-            if(cellProperties.maximizedDim == DIM_VERTICAL)
-            {
-                grid.back().setPosition(
-                    static_cast<float>((i*cellSize) + cellOppositeOffset),
-                    static_cast<float>((j*cellSize) + cellOffset)
-                );
-            }
-            else
-            {
-                grid.back().setPosition(
-                    static_cast<float>((i*cellSize) + cellOffset),
-                    static_cast<float>((j*cellSize) + cellOppositeOffset)
-                );
-            }
-            grid.back().setSize(sf::Vector2f(cellSize * GRID_SHRINK_FACTOR, cellSize * GRID_SHRINK_FACTOR));
-            grid.back().setOrigin(sf::Vector2f(cellSize * GRID_SHRINK_FACTOR * 0.5f, cellSize * GRID_SHRINK_FACTOR * 0.5f));
-            grid.back().setFillColor(sf::Color::White);
-        }
-    }
-
-    return grid;
-}
-
-std::vector<sf::RectangleShape> generatePlacedNodeGeometries(std::vector<nodeStruct_t> &cells, dimension_e maximizedDim, float cellSize, float cellOffset, float cellOppositeOffset, state_e state)
-{
-	std::vector<sf::RectangleShape> placedCells;
-	unsigned int i;
-
-	for (i = 0; i < cells.size(); i++)
-	{
-		// Only look at cells with nets
-		if (cells[i].nodeNet == NULL)
-		{
-			continue;
-		}
-
-		placedCells.push_back(sf::RectangleShape());
-
-		if (maximizedDim == DIM_VERTICAL)
-		{
-			placedCells.back().setPosition(
-				static_cast<float>((cells[i].pos.col * cellSize) + cellOppositeOffset),
-				static_cast<float>((cells[i].pos.row * cellSize) + cellOffset)
-			);
-		}
-		else
-		{
-			placedCells.back().setPosition(
-				static_cast<float>((cells[i].pos.col * cellSize) + cellOffset),
-				static_cast<float>((cells[i].pos.row * cellSize) + cellOppositeOffset)
-			);
-		}
-		placedCells.back().setSize(sf::Vector2f(cellSize * CELL_SHRINK_FACTOR, cellSize * CELL_SHRINK_FACTOR));
-		placedCells.back().setOrigin(sf::Vector2f(cellSize * CELL_SHRINK_FACTOR * 0.5f, cellSize * CELL_SHRINK_FACTOR * 0.5f));
-		if (state == STATE_PARTITIONING)
-		{
-			placedCells.back().setFillColor(sf::Color(180, 180, 180, 255));
-		}
-		else
-		{
-			placedCells.back().setFillColor(sf::Color(160, 193, 165, 255));
-		}
-	}
-
-	return placedCells;
 }
 
 std::string getInfoportString(partitionerStruct_t *partitionerStruct)
