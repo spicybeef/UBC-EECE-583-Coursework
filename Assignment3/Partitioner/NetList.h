@@ -103,7 +103,7 @@ public:
 private:
 	// These function are helpers
 	void updateNetColor(unsigned int id);
-	drawPosStruct_t getGridCellCoordinate(cellPropertiesStruct_t cellProperties, unsigned int col, unsigned int row);
+	drawPosStruct_t getGridCellCoordinate(unsigned int col, unsigned int row);
 
 	//** Class Member Variables
 private:

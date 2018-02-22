@@ -2,19 +2,15 @@
 #include <iostream>
 #include <iomanip>
 #include <fstream>
-#include <sstream>
 #include <string>
 #include <vector>
-#include <ctime>
 
 // SFML Includes
 #include <SFML/Graphics.hpp>
 
 // Program Includes
 #include "Partitioner.h"
-
-parsedInputStruct_t *input = new parsedInputStruct_t();
-partitionerStruct_t *placer = new partitionerStruct_t();
+#include "NetList.h"
 
 int main(int argc, char **argv)
 {
@@ -30,15 +26,16 @@ int main(int argc, char **argv)
     std::vector<sf::RectangleShape> backgroundGrid;
 	std::vector<sf::RectangleShape> placedCells;
     std::vector<sf::Vertex> netLines;
-
-    // Seed our randomizer with the current time
-    std::srand(static_cast<unsigned int>(std::time(nullptr)));
+	// Parsed input and partitioner structs
+	parsedInputStruct_t *input;
+	partitionerStruct_t *placer;
+	// NetList object
+	NetList *netList;
 
     // Background
     sf::RectangleShape background(sf::Vector2f(WIN_GRAPHICPORT_WIDTH, WIN_GRAPHICPORT_HEIGHT));
     background.setPosition(sf::Vector2f(0.f, 0.f));
     background.setFillColor(sf::Color(200, 200, 200, 255));
-
     // Log
     sf::Font font;
     sf::Text text;
@@ -49,7 +46,6 @@ int main(int argc, char **argv)
     text.setFillColor(sf::Color::Green);
     text.setStyle(sf::Text::Regular);
     text.setPosition(sf::Vector2f(0.f + WIN_INFOPORT_PADDING, WIN_VIEWPORT_HEIGHT - WIN_INFOPORT_HEIGHT + WIN_INFOPORT_PADDING));
-
     // Separator
     sf::Vertex line[] =
     {
@@ -59,7 +55,6 @@ int main(int argc, char **argv)
 
     // Filename to read in is the second argument
     std::ifstream myfile(placer->filename, std::ios::in);
-
     // Check if file was opened properly
     if(myfile.is_open())
     {
@@ -74,23 +69,14 @@ int main(int argc, char **argv)
     // Parse input file
     parseInputFile(&myfile, input);
 
+	// Instantiate the NetList
+	netList = new NetList(input);
+
     // Get a grid, only need to do this once since it is static
-    backgroundGrid = generateGridGeometries(input, placer);
+	backgroundGrid = netList->generateGridGeometries();
 
-	// Push back enough nodes for the nets
-	generateNodes(input->numCols * input->numRows, input->numNodes, placer);
-	// Connect them via their nets
-	generateNodeConnections(input, placer);
-
-    // Initialize the grid model
-    placer->grid = initializeGridModel(input->numCols, input->numRows);
     // Place the cells at random
-    generateNodePlacement(input->numCols, input->numRows, placer->cellProperties);
-    // Give each cell a pointer to their on net
-    initializeNodeNet(placer->nets);
-    // Set all nets to their starting color
-    initializeNetColors(placer->nets, input->numCols, input->numRows);
-
+	netList->randomizeNodePlacement();
     // Initialize placer state
     placer->currentState = STATE_START;
     
@@ -99,7 +85,7 @@ int main(int argc, char **argv)
     sf::RenderWindow window(sf::VideoMode(
         static_cast<unsigned int>(WIN_VIEWPORT_WIDTH),
         static_cast<unsigned int>(WIN_VIEWPORT_HEIGHT)),
-        "Simulated Annealing Placer", sf::Style::Titlebar | sf::Style::Close | sf::Style::Resize);
+        "Partitioner", sf::Style::Titlebar | sf::Style::Close | sf::Style::Resize);
     window.setView(calcView(window.getSize(), viewportSize));
 
 	// Do partitioning and output results
@@ -131,9 +117,9 @@ int main(int argc, char **argv)
         }
 
         // Get net lines
-        netLines = generateNetGeometries(placer->nets);
+        netLines = netList->generateNetGeometries();
 		// Get placed cells
-		placedCells = generatePlacedNodeGeometries(placer->nodes, placer->cellProperties.maximizedDim, placer->cellProperties.cellSize, placer->cellProperties.cellOffset, placer->cellProperties.cellOppositeOffset, placer->currentState);
+		placedCells = netList->generatePlacedNodeGeometries();
 
 		// Clear window
         window.clear();
@@ -330,20 +316,6 @@ void doPartitioning(partitionerStruct_t *partitionerStruct)
     }
 }
 
-std::vector<std::string> splitString(std::string inString, char delimiter)
-{
-    std::vector<std::string> internal;
-    std::stringstream ss(inString); // Turn the string into a stream.
-    std::string temp;
-
-    while(std::getline(ss, temp, delimiter))
-    {
-        internal.push_back(temp);
-    }
-
-    return internal;
-}
-
 sf::View calcView(const sf::Vector2u &windowSize, const sf::Vector2u &viewportSize)
 {
     sf::FloatRect viewport(0.f, 0.f, 1.f, 1.f);
@@ -405,114 +377,6 @@ bool parseInputFile(std::ifstream *inputFile, parsedInputStruct_t *inputStruct)
 
 
     return true;
-}
-
-int getRandomInt(int i)
-{
-    return std::rand() % i;
-}
-
-double getRandomDouble(void)
-{
-    return static_cast<double>(std::rand()) / static_cast<double>(RAND_MAX);
-}
-
-drawPosStruct_t getGridCellCoordinate(cellPropertiesStruct_t cellProperties, unsigned int col, unsigned int row)
-{
-	drawPosStruct_t drawPos;
-
-	// Depending on our current maximized direction, return the drawing position for the selected column and row
-	if (cellProperties.maximizedDim == DIM_VERTICAL)
-	{
-		drawPos.x = col * cellProperties.cellSize + cellProperties.cellOppositeOffset;
-		drawPos.y = row * cellProperties.cellSize + cellProperties.cellOffset;
-	}
-	else
-	{
-		drawPos.x = col * cellProperties.cellSize + cellProperties.cellOffset;
-		drawPos.y = row * cellProperties.cellSize + cellProperties.cellOppositeOffset;
-	}
-
-	return drawPos;
-}
-
-void updateNodePosition(cellPropertiesStruct_t cellProperties, nodeStruct_t &node, std::vector<std::vector<nodeStruct_t*>> &grid, unsigned int col, unsigned int row)
-{
-	// Update the cell's grid position
-	node.pos.col = col;
-	node.pos.row = row;
-
-	// Update the cell's drawing position
-	node.drawPos = getGridCellCoordinate(cellProperties, col, row);
-
-	// Add the cell to the grid
-	grid[col][row] = &node;
-}
-
-void generateNodePlacement(unsigned int numCols, unsigned int numRows, cellPropertiesStruct_t cellProperties, std::vector<std::vector<nodeStruct_t*>> &grid, std::vector<nodeStruct_t> &nodes)
-{
-	unsigned int i, col, row;
-
-	for (i = 0; i < nodes.size(); i++)
-	{
-		// Put it somewhere randomly on the grid (make sure it's empty)
-		do
-		{
-			col = static_cast<unsigned int>(getRandomInt(numCols));
-			row = static_cast<unsigned int>(getRandomInt(numRows));
-		}
-        while(grid[col][row] != NULL);
-
-		// Update the cell's position
-		updateNodePosition(cellProperties, nodes[i], grid, col, row);
-	}
-}
-
-void initializeNetColors(std::vector<netStruct_t> &nets, unsigned int col, unsigned int row)
-{
-    unsigned int i, rgb[3];
-    sf::Color startingColor;
-
-    // Nets start with a red color
-    rgb[0] = 255;
-    rgb[1] = 0;
-    rgb[2] = 0;
-
-    startingColor = sf::Color(rgb[0], rgb[1], rgb[2], 255);
-
-    // When this function has been called, nets should have been randomly placed on the grid
-    // Use their current position to give them their starting
-    for(i = 0; i < nets.size(); i++)
-    {
-        // Calculate the half perimeter of the net, we use the starting position as its "max"
-        //nets[i].maxHalfPerim = calculateHalfPerim(nets[i]);
-        // Make the maximum half perimeter equal to row + width
-        nets[i].maxHalfPerim = col + row - 2;
-        // Give the net the starting color
-        nets[i].color = startingColor;
-    }
-}
-
-std::vector<sf::Vertex> generateNetGeometries(std::vector<netStruct_t> &nets)
-{
-    unsigned int i, j;
-    std::vector<sf::Vertex> netLines;
-	sf::Color color;
-    nodeStruct_t *cellPointer[2];
-
-    for(i = 0; i < nets.size(); i++)
-    {
-		color = nets[i].color;
-        for(j = 0; j < nets[i].connections.size() - 1; j++)
-        {
-            cellPointer[0] = nets[i].connections[j];
-            cellPointer[1] = nets[i].connections[j + 1];
-            netLines.push_back(sf::Vertex(sf::Vector2f(cellPointer[0]->drawPos.x, cellPointer[0]->drawPos.y), color));
-			netLines.push_back(sf::Vertex(sf::Vector2f(cellPointer[1]->drawPos.x, cellPointer[1]->drawPos.y), color));
-        }
-    }
-
-    return netLines;
 }
 
 std::string getInfoportString(partitionerStruct_t *partitionerStruct)

@@ -22,19 +22,23 @@ void NetList::initializeGridModel()
 {
 	unsigned int i, j;
 	
-
+	gridColVec col;
+	gridRowVec row;
 
 	mGrid.clear();
 
 	// Generate the grid model
 	for (i = 0; i < mNumCols; i++)
 	{
-		mGrid.push_back(gridColVec());
+		row.clear();
 		for (j = 0; j < mNumRows; j++)
 		{
-			mGrid[i].push_back(nullptr);
+			row.push_back(nullptr);
 		}
+		col.push_back(row);
 	}
+
+	mGrid = col;
 }
 
 void NetList::initializeNodes()
@@ -256,25 +260,66 @@ std::vector<sf::RectangleShape> NetList::generatePlacedNodeGeometries()
 
 void NetList::randomizeNodePlacement()
 {
+	unsigned int i, col, row;
+
+	for (i = 0; i < mNodes.size(); i++)
+	{
+		// Put it somewhere randomly on the grid (make sure it's empty)
+		do
+		{
+			col = static_cast<unsigned int>(getRandomInt(mNumCols));
+			row = static_cast<unsigned int>(getRandomInt(mNumRows));
+		}
+		while (mGrid[col][row] != nullptr);
+
+		// Update the cell's position
+		updateNodePosition(i, col, row);
+	}
 }
 
 void NetList::swapNodePartition(unsigned int id)
 {
+	// Move the node to the other partition
 }
 
 void NetList::getNodePosition(unsigned int id, unsigned int * col, unsigned int * row)
 {
+	*col = mNodes[id].pos.col;
+	*row = mNodes[id].pos.row;
 }
 
 void NetList::updateNodePosition(unsigned int id, unsigned int col, unsigned int row)
 {
+	// Update the cell's grid position
+	mNodes[id].pos.col = col;
+	mNodes[id].pos.row = row;
+
+	// Update the cell's drawing position
+	mNodes[id].drawPos = getGridCellCoordinate(col, row);
+
+	// Add the cell address to the grid
+	mGrid[col][row] = &mNodes[id];
 }
 
 void NetList::updateNetColor(unsigned int id)
 {
 }
 
-drawPosStruct_t NetList::getGridCellCoordinate(cellPropertiesStruct_t cellProperties, unsigned int col, unsigned int row)
+drawPosStruct_t NetList::getGridCellCoordinate(unsigned int col, unsigned int row)
 {
-	return drawPosStruct_t();
+	drawPosStruct_t drawPos;
+
+	// Depending on our current maximized direction, return the drawing position for the selected column and row
+	if (mCellProperties.maximizedDim == DIM_VERTICAL)
+	{
+		drawPos.x = col * mCellProperties.cellSize + mCellProperties.cellOppositeOffset;
+		drawPos.y = row * mCellProperties.cellSize + mCellProperties.cellOffset;
+	}
+	else
+	{
+		drawPos.x = col * mCellProperties.cellSize + mCellProperties.cellOffset;
+		drawPos.y = row * mCellProperties.cellSize + mCellProperties.cellOppositeOffset;
+	}
+
+	return drawPos;
 }
