@@ -10,7 +10,9 @@
 #include "Partitioner.h"
 
 // typedef helpers to make things legible
-typedef std::vector<std::vector<nodeStruct_t*>> gridVec;
+typedef std::vector<nodeStruct_t*> gridRowVec;
+typedef std::vector<gridRowVec> gridColVec;
+typedef gridColVec gridVec;
 
 // Dimensions enum
 typedef enum
@@ -78,13 +80,15 @@ public:
 
 	//** Class Functions
 	// Initializers
+private:
 	void initializeGridModel();
 	void initializeNodes();
-	void initializeNodeConnections();
+	void initializeNets();
 	void initializeNodeNets();
 	void initializeNetColors();
 	void initializeCellProperties();
 
+public:
 	// These function create the SFML primitives used to draw the partitioner
 	std::vector<sf::RectangleShape> generateGridGeometries();
 	std::vector<sf::Vertex> generateNetGeometries(void);
@@ -96,11 +100,13 @@ public:
 	void getNodePosition(unsigned int id, unsigned int *col, unsigned int *row);
 	void updateNodePosition(unsigned int id, unsigned int col, unsigned int row);
 
+private:
 	// These function are helpers
 	void updateNetColor(unsigned int id);
 	drawPosStruct_t getGridCellCoordinate(cellPropertiesStruct_t cellProperties, unsigned int col, unsigned int row);
 
 	//** Class Member Variables
+private:
 	gridVec	mGrid;							///< Grid containing pointers to nodes
 	unsigned int mNumCols;					///< Number of grid columns
 	unsigned int mNumRows;					///< Number of grid rows

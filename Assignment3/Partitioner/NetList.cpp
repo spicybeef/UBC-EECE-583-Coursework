@@ -1,13 +1,18 @@
 #include "NetList.h"
 
-
-
 NetList::NetList(parsedInputStruct_t parsedInput)
 {
 	// Copy into the object the file's parsed input
 	mParsedInput = parsedInput;
-}
 
+	// Initialize internal structures now that we have a parsed input
+	initializeGridModel();
+	initializeNodes();
+	initializeNets();
+	initializeNodeNets();
+	initializeNetColors();
+	initializeCellProperties();
+}
 
 NetList::~NetList()
 {
@@ -17,12 +22,14 @@ void NetList::initializeGridModel()
 {
 	unsigned int i, j;
 	
+
+
 	mGrid.clear();
 
 	// Generate the grid model
 	for (i = 0; i < mNumCols; i++)
 	{
-		mGrid.push_back(std::vector<nodeStruct_t*>());
+		mGrid.push_back(gridColVec());
 		for (j = 0; j < mNumRows; j++)
 		{
 			mGrid[i].push_back(nullptr);
@@ -46,7 +53,7 @@ void NetList::initializeNodes()
 	}
 }
 
-void NetList::initializeNodeConnections()
+void NetList::initializeNets()
 {
 	unsigned int i, j;
 	nodeStruct_t *cellPointer;
@@ -245,4 +252,29 @@ std::vector<sf::RectangleShape> NetList::generatePlacedNodeGeometries()
 	}
 
 	return placedCells;
+}
+
+void NetList::randomizeNodePlacement()
+{
+}
+
+void NetList::swapNodePartition(unsigned int id)
+{
+}
+
+void NetList::getNodePosition(unsigned int id, unsigned int * col, unsigned int * row)
+{
+}
+
+void NetList::updateNodePosition(unsigned int id, unsigned int col, unsigned int row)
+{
+}
+
+void NetList::updateNetColor(unsigned int id)
+{
+}
+
+drawPosStruct_t NetList::getGridCellCoordinate(cellPropertiesStruct_t cellProperties, unsigned int col, unsigned int row)
+{
+	return drawPosStruct_t();
 }
