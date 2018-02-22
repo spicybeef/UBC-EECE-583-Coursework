@@ -1,4 +1,5 @@
 #include "NetList.h"
+#include "Util.h"
 
 NetList::NetList(parsedInputStruct_t parsedInput)
 {

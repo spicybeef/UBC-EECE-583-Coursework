@@ -9,11 +9,6 @@
 // Program Includes
 #include "Partitioner.h"
 
-// typedef helpers to make things legible
-typedef std::vector<nodeStruct_t*> gridRowVec;
-typedef std::vector<gridRowVec> gridColVec;
-typedef gridColVec gridVec;
-
 // Dimensions enum
 typedef enum
 {
@@ -70,6 +65,11 @@ typedef struct
 	unsigned int								divider;				///< Column or row that starts the partition
 
 } cellPropertiesStruct_t;
+
+// typedef helpers to make things legible
+typedef std::vector<nodeStruct_t*> gridRowVec;
+typedef std::vector<gridRowVec> gridColVec;
+typedef gridColVec gridVec;
 
 class NetList
 {

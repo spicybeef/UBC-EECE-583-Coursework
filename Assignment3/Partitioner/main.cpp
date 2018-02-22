@@ -2,6 +2,7 @@
 #include <iostream>
 #include <iomanip>
 #include <fstream>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -11,13 +12,11 @@
 // Program Includes
 #include "Partitioner.h"
 #include "NetList.h"
+#include "Util.h"
 
 int main(int argc, char **argv)
 {
     unsigned int i, swapCount;
-	// File handling
-    placer->filename = argv[1];
-    //placer->filename = const_cast<char *>("..\\..\\benchmarks\\cm151a.txt");
 	// Viewport size
     const sf::Vector2u viewportSize(
         static_cast<unsigned int>(WIN_VIEWPORT_WIDTH),
@@ -28,7 +27,7 @@ int main(int argc, char **argv)
     std::vector<sf::Vertex> netLines;
 	// Parsed input and partitioner structs
 	parsedInputStruct_t *input;
-	partitionerStruct_t *placer;
+	partitionerStruct_t *partitioner;
 	// NetList object
 	NetList *netList;
 
@@ -53,16 +52,22 @@ int main(int argc, char **argv)
         sf::Vertex(sf::Vector2f(WIN_VIEWPORT_WIDTH, WIN_VIEWPORT_HEIGHT - WIN_INFOPORT_HEIGHT))
     };
 
+	input = new parsedInputStruct_t();
+	partitioner = new partitionerStruct_t();
+
+	// File handling
+	partitioner->filename = argv[1];
+	//placer->filename = const_cast<char *>("..\\..\\benchmarks\\cm151a.txt");
     // Filename to read in is the second argument
-    std::ifstream myfile(placer->filename, std::ios::in);
+    std::ifstream myfile(partitioner->filename, std::ios::in);
     // Check if file was opened properly
     if(myfile.is_open())
     {
-        std::cout << "File " << placer->filename << " opened! Here's what's in it:" << std::endl;
+        std::cout << "File " << partitioner->filename << " opened! Here's what's in it:" << std::endl;
     }
     else
     {
-        std::cout << "FATAL ERROR! File " << placer->filename << " could not be opened!" << std::endl;
+        std::cout << "FATAL ERROR! File " << partitioner->filename << " could not be opened!" << std::endl;
         return -1;
     }
 
@@ -70,7 +75,7 @@ int main(int argc, char **argv)
     parseInputFile(&myfile, input);
 
 	// Instantiate the NetList
-	netList = new NetList(input);
+	netList = new NetList(*input);
 
     // Get a grid, only need to do this once since it is static
 	backgroundGrid = netList->generateGridGeometries();
@@ -78,7 +83,7 @@ int main(int argc, char **argv)
     // Place the cells at random
 	netList->randomizeNodePlacement();
     // Initialize placer state
-    placer->currentState = STATE_START;
+    partitioner->currentState = STATE_START;
     
     // Create our render window object
     // Give it a default type (titlebar, close button)
@@ -93,7 +98,7 @@ int main(int argc, char **argv)
     while(window.isOpen())
     { 
         // Run our partitioning
-        doPartitioning(placer);
+        doPartitioning(partitioner);
         swapCount++;
         // Only update every so often to speed up process
 		/*
@@ -126,7 +131,7 @@ int main(int argc, char **argv)
         // Draw background
         window.draw(background);
         // Draw infoport
-        text.setString(getInfoportString(placer));
+        text.setString(getInfoportString(partitioner));
         window.draw(text);
         // Draw separator
         window.draw(line, 2, sf::Lines);
@@ -153,167 +158,167 @@ int main(int argc, char **argv)
 
 void doPartitioning(partitionerStruct_t *partitionerStruct)
 {
-    unsigned int i, randPicks[2];
-    int oldHalfPerimSum, newHalfPerimSum, cost;
-    double standardDev, randomDouble;
-    bool acceptSwap;
+   // unsigned int i, randPicks[2];
+   // int oldHalfPerimSum, newHalfPerimSum, cost;
+   // double standardDev, randomDouble;
+   // bool acceptSwap;
 
-    switch(partitionerStruct->currentState)
-    {
-        case STATE_START:
-			partitionerStruct->startTime = clock();
-            partitionerStruct->totalTempDecrements = 0;
-            partitionerStruct->costTracker.clear();
-            partitionerStruct->acceptanceTracker.clear();
-            // Determine moves per temperature decrease 10 * N^(4/3)
-            partitionerStruct->movesPerTempDec = static_cast<unsigned int>(10.0 * pow(static_cast<double>(placer->cells.size()), 4.0 / 3.0));
-            //std::cout << "For " << placer->cells.size() << " cells, each temperature decrement will have ";
-            //std::cout << partitionerStruct->movesPerTempDec << " moves" << std::endl;
-            // Obtain the initial total half perimeter
-            partitionerStruct->startingHalfPerimSum = calculateTotalHalfPerim(partitionerStruct->nets);
-            // Determine the initial temperature
-            // Perform 50 swaps
-            for(i = 0; i < 50; i++)
-            {
-                // Record initial total half perimeter
-                oldHalfPerimSum = calculateTotalHalfPerim(partitionerStruct->nets);
-                // Pick two cells at random
-                randPicks[0] = getRandomInt(static_cast<unsigned int>(partitionerStruct->cells.size()));
-                randPicks[1] = getRandomInt(static_cast<unsigned int>(partitionerStruct->cells.size()));
-                // Swap them
-                swapCells(&partitionerStruct->cells[randPicks[0]], &partitionerStruct->cells[randPicks[1]], partitionerStruct);
-                // Record the new total half perimeter
-                newHalfPerimSum = calculateTotalHalfPerim(partitionerStruct->nets);
-                // Push back cost
-                //std::cout << "Cost of swap " << i << " was " << newHalfPerimSum - oldHalfPerimSum << std::endl;
-                partitionerStruct->costTracker.push_back(newHalfPerimSum - oldHalfPerimSum);
-            }
-            // Calculate the standard deviation, this is used for the initial temperature
-            standardDev = calculateStandardDeviation(partitionerStruct->costTracker);
+   // switch(partitionerStruct->currentState)
+   // {
+   //     case STATE_START:
+			//partitionerStruct->startTime = clock();
+   //         partitionerStruct->totalTempDecrements = 0;
+   //         partitionerStruct->costTracker.clear();
+   //         partitionerStruct->acceptanceTracker.clear();
+   //         // Determine moves per temperature decrease 10 * N^(4/3)
+   //         partitionerStruct->movesPerTempDec = static_cast<unsigned int>(10.0 * pow(static_cast<double>(placer->cells.size()), 4.0 / 3.0));
+   //         //std::cout << "For " << placer->cells.size() << " cells, each temperature decrement will have ";
+   //         //std::cout << partitionerStruct->movesPerTempDec << " moves" << std::endl;
+   //         // Obtain the initial total half perimeter
+   //         partitionerStruct->startingHalfPerimSum = calculateTotalHalfPerim(partitionerStruct->nets);
+   //         // Determine the initial temperature
+   //         // Perform 50 swaps
+   //         for(i = 0; i < 50; i++)
+   //         {
+   //             // Record initial total half perimeter
+   //             oldHalfPerimSum = calculateTotalHalfPerim(partitionerStruct->nets);
+   //             // Pick two cells at random
+   //             randPicks[0] = getRandomInt(static_cast<unsigned int>(partitionerStruct->cells.size()));
+   //             randPicks[1] = getRandomInt(static_cast<unsigned int>(partitionerStruct->cells.size()));
+   //             // Swap them
+   //             swapCells(&partitionerStruct->cells[randPicks[0]], &partitionerStruct->cells[randPicks[1]], partitionerStruct);
+   //             // Record the new total half perimeter
+   //             newHalfPerimSum = calculateTotalHalfPerim(partitionerStruct->nets);
+   //             // Push back cost
+   //             //std::cout << "Cost of swap " << i << " was " << newHalfPerimSum - oldHalfPerimSum << std::endl;
+   //             partitionerStruct->costTracker.push_back(newHalfPerimSum - oldHalfPerimSum);
+   //         }
+   //         // Calculate the standard deviation, this is used for the initial temperature
+   //         standardDev = calculateStandardDeviation(partitionerStruct->costTracker);
 
-            //std::cout << "Standard deviation is " << standardDev << std::endl;
-            partitionerStruct->startTemperature = standardDev * START_TEMP_STD_MULT;
-            partitionerStruct->currentTemperature = standardDev * START_TEMP_STD_MULT;
-            //std::cout << "Starting temperature is " << partitionerStruct->currentTemperature;
-            
-            // Reset cost tracker
-            partitionerStruct->costTracker.clear();
-            // Start annealin'
-            partitionerStruct->currentState = STATE_PARTITIONING;
-            break;
-        case STATE_PARTITIONING:
-            // We are annealing
-            // Initially we don't accept the swap
-            acceptSwap = false;
-            // Calculate the current total half perimeter
-            placer->currentHalfPerimSum = calculateTotalHalfPerim(placer->nets);
-            // Check if we're done for this temperature
-            if(partitionerStruct->currentMove == partitionerStruct->movesPerTempDec)
-            {
-                // Restart our move count
-                partitionerStruct->currentMove = 0;
-                // Determine the standard deviation
-                standardDev = calculateStandardDeviation(partitionerStruct->costTracker);
-                // Calculate the new temperature
-                partitionerStruct->currentTemperature = calculateNewTemp(partitionerStruct->currentTemperature, standardDev, TEMP_DECREASE_EXP);
-                // Increment the temperature
-                partitionerStruct->totalTempDecrements++;
-                // Reset the cost tracker
-                partitionerStruct->costTracker.clear();
-				// Check if we haven't accepted anything this past temperature decrement
-				if (calculateAcceptanceRate(partitionerStruct->acceptanceTracker) <= ACCEPTANCE_RATE_CUTOFF)
-				{
-					// We're done!
-					partitionerStruct->currentState = STATE_FINISHED;
-					// Record finish time
-					partitionerStruct->endTime = clock();
-				}
-				else
-				{
-					// Reset the acceptance tracker
-					partitionerStruct->acceptanceTracker.clear();
-				}
-            }
-            // We still have swaps to do
-            else
-            {
-                // Record initial total half perimeter
-                oldHalfPerimSum = calculateTotalHalfPerim(partitionerStruct->nets);
-                // Pick two cells at random
-                randPicks[0] = getRandomInt(static_cast<unsigned int>(partitionerStruct->cells.size()));
-                randPicks[1] = getRandomInt(static_cast<unsigned int>(partitionerStruct->cells.size()));
-                // Swap them
-                swapCells(&partitionerStruct->cells[randPicks[0]], &partitionerStruct->cells[randPicks[1]], partitionerStruct);
-                // Record the new total half perimeter
-                newHalfPerimSum = calculateTotalHalfPerim(partitionerStruct->nets);
-				// If it's worse than our current worse, store it
-				if (static_cast<unsigned int>(newHalfPerimSum) > partitionerStruct->startingHalfPerimSum)
-				{
-					partitionerStruct->startingHalfPerimSum = newHalfPerimSum;
-				}
+   //         //std::cout << "Standard deviation is " << standardDev << std::endl;
+   //         partitionerStruct->startTemperature = standardDev * START_TEMP_STD_MULT;
+   //         partitionerStruct->currentTemperature = standardDev * START_TEMP_STD_MULT;
+   //         //std::cout << "Starting temperature is " << partitionerStruct->currentTemperature;
+   //         
+   //         // Reset cost tracker
+   //         partitionerStruct->costTracker.clear();
+   //         // Start annealin'
+   //         partitionerStruct->currentState = STATE_PARTITIONING;
+   //         break;
+   //     case STATE_PARTITIONING:
+   //         // We are annealing
+   //         // Initially we don't accept the swap
+   //         acceptSwap = false;
+   //         // Calculate the current total half perimeter
+   //         placer->currentHalfPerimSum = calculateTotalHalfPerim(placer->nets);
+   //         // Check if we're done for this temperature
+   //         if(partitionerStruct->currentMove == partitionerStruct->movesPerTempDec)
+   //         {
+   //             // Restart our move count
+   //             partitionerStruct->currentMove = 0;
+   //             // Determine the standard deviation
+   //             standardDev = calculateStandardDeviation(partitionerStruct->costTracker);
+   //             // Calculate the new temperature
+   //             partitionerStruct->currentTemperature = calculateNewTemp(partitionerStruct->currentTemperature, standardDev, TEMP_DECREASE_EXP);
+   //             // Increment the temperature
+   //             partitionerStruct->totalTempDecrements++;
+   //             // Reset the cost tracker
+   //             partitionerStruct->costTracker.clear();
+			//	// Check if we haven't accepted anything this past temperature decrement
+			//	if (calculateAcceptanceRate(partitionerStruct->acceptanceTracker) <= ACCEPTANCE_RATE_CUTOFF)
+			//	{
+			//		// We're done!
+			//		partitionerStruct->currentState = STATE_FINISHED;
+			//		// Record finish time
+			//		partitionerStruct->endTime = clock();
+			//	}
+			//	else
+			//	{
+			//		// Reset the acceptance tracker
+			//		partitionerStruct->acceptanceTracker.clear();
+			//	}
+   //         }
+   //         // We still have swaps to do
+   //         else
+   //         {
+   //             // Record initial total half perimeter
+   //             oldHalfPerimSum = calculateTotalHalfPerim(partitionerStruct->nets);
+   //             // Pick two cells at random
+   //             randPicks[0] = getRandomInt(static_cast<unsigned int>(partitionerStruct->cells.size()));
+   //             randPicks[1] = getRandomInt(static_cast<unsigned int>(partitionerStruct->cells.size()));
+   //             // Swap them
+   //             swapCells(&partitionerStruct->cells[randPicks[0]], &partitionerStruct->cells[randPicks[1]], partitionerStruct);
+   //             // Record the new total half perimeter
+   //             newHalfPerimSum = calculateTotalHalfPerim(partitionerStruct->nets);
+			//	// If it's worse than our current worse, store it
+			//	if (static_cast<unsigned int>(newHalfPerimSum) > partitionerStruct->startingHalfPerimSum)
+			//	{
+			//		partitionerStruct->startingHalfPerimSum = newHalfPerimSum;
+			//	}
 
-                // calculate cost
-                cost = newHalfPerimSum - oldHalfPerimSum;
+   //             // calculate cost
+   //             cost = newHalfPerimSum - oldHalfPerimSum;
 
-                // If this was a bad move, if so, check if we are going to accept it
-                if(newHalfPerimSum >= oldHalfPerimSum)
-                {
-                    randomDouble = getRandomDouble();
-					//std::cout << "Random double: " << randomDouble << " ";
-                    // Check if we accept swap
-					//std::cout << "Cost: " << static_cast<double>(cost) << " ";
-					//std::cout << "Swap exp: " << exp(-1.0 * static_cast<double>(cost) / partitionerStruct->currentTemperature) << std::endl;
-					if (cost == 0)
-					{
-						// No point in doing this
-						// Revert cell swap
-						swapCells(&partitionerStruct->cells[randPicks[0]], &partitionerStruct->cells[randPicks[1]], partitionerStruct);
-					}
-                    else if(randomDouble < exp(-1.0 * static_cast<double>(cost) / partitionerStruct->currentTemperature))
-                    {
-                        // Accept the swap!
-                        acceptSwap = true;
-                    }
-                    else
-                    {
-                        // Not going to happen
-                        // Revert cell swap
-                        swapCells(&partitionerStruct->cells[randPicks[0]], &partitionerStruct->cells[randPicks[1]], partitionerStruct);
-                    }
-                }
-                else
-                {
-                    // Accept the swap!
-                    acceptSwap = true;
-                }
+   //             // If this was a bad move, if so, check if we are going to accept it
+   //             if(newHalfPerimSum >= oldHalfPerimSum)
+   //             {
+   //                 randomDouble = getRandomDouble();
+			//		//std::cout << "Random double: " << randomDouble << " ";
+   //                 // Check if we accept swap
+			//		//std::cout << "Cost: " << static_cast<double>(cost) << " ";
+			//		//std::cout << "Swap exp: " << exp(-1.0 * static_cast<double>(cost) / partitionerStruct->currentTemperature) << std::endl;
+			//		if (cost == 0)
+			//		{
+			//			// No point in doing this
+			//			// Revert cell swap
+			//			swapCells(&partitionerStruct->cells[randPicks[0]], &partitionerStruct->cells[randPicks[1]], partitionerStruct);
+			//		}
+   //                 else if(randomDouble < exp(-1.0 * static_cast<double>(cost) / partitionerStruct->currentTemperature))
+   //                 {
+   //                     // Accept the swap!
+   //                     acceptSwap = true;
+   //                 }
+   //                 else
+   //                 {
+   //                     // Not going to happen
+   //                     // Revert cell swap
+   //                     swapCells(&partitionerStruct->cells[randPicks[0]], &partitionerStruct->cells[randPicks[1]], partitionerStruct);
+   //                 }
+   //             }
+   //             else
+   //             {
+   //                 // Accept the swap!
+   //                 acceptSwap = true;
+   //             }
 
-                if(acceptSwap)
-                {
-                    // Update the cells' net color
-                    updateNetColor(partitionerStruct->cells[randPicks[0]]);
-                    updateNetColor(partitionerStruct->cells[randPicks[1]]);
-                    
-                    // Push back acceptance
-                    partitionerStruct->acceptanceTracker.push_back(true);
-                    // Push back cost
-                    //std::cout << "Cost of swap " << i << " was " << newHalfPerimSum - oldHalfPerimSum << std::endl;
-                    partitionerStruct->costTracker.push_back(cost);
-                }
-                else
-                {
-                    // Push back non-acceptance
-                    partitionerStruct->acceptanceTracker.push_back(false);
-                }
+   //             if(acceptSwap)
+   //             {
+   //                 // Update the cells' net color
+   //                 updateNetColor(partitionerStruct->cells[randPicks[0]]);
+   //                 updateNetColor(partitionerStruct->cells[randPicks[1]]);
+   //                 
+   //                 // Push back acceptance
+   //                 partitionerStruct->acceptanceTracker.push_back(true);
+   //                 // Push back cost
+   //                 //std::cout << "Cost of swap " << i << " was " << newHalfPerimSum - oldHalfPerimSum << std::endl;
+   //                 partitionerStruct->costTracker.push_back(cost);
+   //             }
+   //             else
+   //             {
+   //                 // Push back non-acceptance
+   //                 partitionerStruct->acceptanceTracker.push_back(false);
+   //             }
 
-                // Next move
-                partitionerStruct->currentMove++;
-            }
-            break;
-        case STATE_FINISHED:
-            break;
-        default:
-            break;
-    }
+   //             // Next move
+   //             partitionerStruct->currentMove++;
+   //         }
+   //         break;
+   //     case STATE_FINISHED:
+   //         break;
+   //     default:
+   //         break;
+   // }
 }
 
 sf::View calcView(const sf::Vector2u &windowSize, const sf::Vector2u &viewportSize)
@@ -382,8 +387,9 @@ bool parseInputFile(std::ifstream *inputFile, parsedInputStruct_t *inputStruct)
 std::string getInfoportString(partitionerStruct_t *partitionerStruct)
 {
     std::stringstream stringStream;
-    int difference;
 	/*
+    int difference;
+
     difference = static_cast<int>(partitionerStruct->startingHalfPerimSum) - static_cast<int>(partitionerStruct->currentHalfPerimSum);
 
     stringStream << std::fixed << std::setprecision(3);
@@ -412,7 +418,7 @@ std::string getInfoportString(partitionerStruct_t *partitionerStruct)
             break;
     }
 	*/
-    stringStream << "Filename:    " << placer->filename;
+    //stringStream << "Filename:    " << placer->filename;
 
     return stringStream.str();
 }

@@ -55,7 +55,7 @@ typedef struct
 // Constants for the partitioner
 typedef struct
 {
-    char                                        &filename;              ///< Current filename
+    std::string                                 filename;              ///< Current filename
 
 	clock_t										starttime;				///< start time for annealing
 	clock_t										endtime;				///< end time for annealing
@@ -63,10 +63,10 @@ typedef struct
 
 } partitionerStruct_t;
 
-void doPartitioning(partitionerStruct_t &partitionerStruct);
+void doPartitioning(partitionerStruct_t *partitionerStruct);
 
 // Input file parser
-bool parseInputFile(std::ifstream &inputFile, parsedInputStruct_t &inputStruct);
+bool parseInputFile(std::ifstream *inputFile, parsedInputStruct_t *inputStruct);
 
 // Utility functions
 int getRandomInt(int i);
