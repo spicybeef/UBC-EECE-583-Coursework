@@ -81,7 +81,7 @@ private:
     void initializeGridModel();
     void initializeNodes();
     void initializeNets();
-	void initializeNodeNeighbours();
+    void initializeNodeNeighbours();
     void initializeNodeNets();
     void initializeNetColors();
     void initializeCellProperties();
@@ -91,7 +91,7 @@ public:
     std::vector<sf::RectangleShape> generateGridGeometries();
     std::vector<sf::Vertex> generateNetGeometries();
     std::vector<sf::RectangleShape> generatePlacedNodeGeometries();
-	std::vector<sf::Vertex> generatePartitionerDivider();
+    std::vector<sf::Vertex> generatePartitionerDivider();
 
     // Node position functions
     void randomizeNodePlacement();
@@ -101,9 +101,9 @@ public:
 
 private:
     // These function are helpers
-	bool doesSegmentCrossDivider(std::vector<sf::Vector2f> segment);
-	std::vector<sf::Vector2f> getDividerVector();
-	nodeStruct_t * getNodePointer(unsigned int id);
+    bool doesSegmentCrossDivider(std::vector<sf::Vector2f> segment);
+    std::vector<sf::Vector2f> getDividerVector();
+    nodeStruct_t * getNodePointer(unsigned int id);
     void updateNetColor(unsigned int id);
     drawPosStruct_t getGridCellCoordinate(unsigned int col, unsigned int row);
 

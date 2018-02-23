@@ -29,7 +29,7 @@ int main(int argc, char **argv)
     std::vector<sf::RectangleShape> backgroundGrid;
     std::vector<sf::RectangleShape> placedCells;
     std::vector<sf::Vertex> netLines;
-	std::vector<sf::Vertex> dividerLine;
+    std::vector<sf::Vertex> dividerLine;
 
     // NetList object
     NetList *netList;
@@ -107,8 +107,8 @@ int main(int argc, char **argv)
         // Only swap every so often
         if(swapCount > 10)
         {
-			netList->swapNodePartition(getRandomInt(partitioner->mParsedInput.numNodes));
-			swapCount = 0;
+            netList->swapNodePartition(getRandomInt(partitioner->mParsedInput.numNodes));
+            swapCount = 0;
         }
         
 
@@ -121,8 +121,8 @@ int main(int argc, char **argv)
                 window.setView(calcView(sf::Vector2u(event.size.width, event.size.height), viewportSize));
         }
 
-		// Get divider line
-		dividerLine = netList->generatePartitionerDivider();
+        // Get divider line
+        dividerLine = netList->generatePartitionerDivider();
         // Get net lines
         netLines = netList->generateNetGeometries();
         // Get placed cells
@@ -142,8 +142,8 @@ int main(int argc, char **argv)
         {
             window.draw(backgroundGrid[i]);
         }
-		// Draw divider
-		window.draw(&dividerLine.front(), dividerLine.size(), sf::Lines);
+        // Draw divider
+        window.draw(&dividerLine.front(), dividerLine.size(), sf::Lines);
 
         // Draw placed cells
         for (i = 0; i < placedCells.size(); i++)
