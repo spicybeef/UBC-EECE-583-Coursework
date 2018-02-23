@@ -38,7 +38,7 @@ typedef struct Node nodeStruct_t;
 typedef struct Net
 {
     std::vector<nodeStruct_t*>                  connections;            ///< Pointers to the cell's connections
-    sf::Color									color;				    ///< Net color
+    sf::Color                                   color;                  ///< Net color
 } netStruct_t;
 
 // Cell struct
@@ -48,7 +48,7 @@ typedef struct Node
     drawPosStruct_t                             drawPos;                ///< Current drawing position of the cell's center
 
     netStruct_t                                 *nodeNet;               ///< A pointer to the cell's net, for easy reference
-    std::vector<nodeStruct_t*>					neighbours;				///< Pointers to the cell's neighbours
+    std::vector<nodeStruct_t*>                  neighbours;             ///< Pointers to the cell's neighbours
 } nodeStruct_t;
 
 typedef struct
@@ -58,8 +58,8 @@ typedef struct
     float                                       cellOppositeOffset;     ///< Cell offset for other dimension
 
     dimension_e                                 maximizedDim;           ///< Current maximized dimension
-    
-    unsigned int								divider;				///< Column or row that starts the partition
+
+    unsigned int                                divider;                ///< Column or row that starts the partition
 
 } cellPropertiesStruct_t;
 
@@ -109,12 +109,12 @@ private:
 
     //** Class Member Variables
 private:
-    gridVec	mGrid;							///< Grid containing pointers to nodes
-    unsigned int mNumCols;					///< Number of grid columns
-    unsigned int mNumRows;					///< Number of grid rows
-    std::vector<nodeStruct_t> mNodes;		///< Nodes
-    std::vector<netStruct_t> mNets;			///< Nets
-    cellPropertiesStruct_t mCellProperties;	///< Grid cell properties
-    parsedInputStruct_t mParsedInput;		///< Struct containing the parsed input from the file
+    gridVec mGrid;                          ///< Grid containing pointers to nodes
+    unsigned int mNumCols;                  ///< Number of grid columns
+    unsigned int mNumRows;                  ///< Number of grid rows
+    std::vector<nodeStruct_t> mNodes;       ///< Nodes
+    std::vector<netStruct_t> mNets;         ///< Nets
+    cellPropertiesStruct_t mCellProperties; ///< Grid cell properties
+    parsedInputStruct_t mParsedInput;       ///< Struct containing the parsed input from the file
 };
 

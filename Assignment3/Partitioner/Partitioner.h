@@ -1,7 +1,7 @@
 #pragma once
 
 // typedef helpers to make things legible
-typedef std::vector<std::vector<unsigned int>>	netVec;
+typedef std::vector<std::vector<unsigned int>>  netVec;
 
 // partitioning states enum
 typedef enum
@@ -36,10 +36,10 @@ public:
     void doPartitioning();
     std::string getInfoportString();
 
-    std::string mFilename;				///< Current filename
-    parsedInputStruct_t mParsedInput;	///< Parsed input struct
-    clock_t mStarttime;					///< start time for partitioning
-    clock_t mEndtime;					///< end time for partitioning
-    state_e mCurrentState;				///< Current partitioning state
+    std::string mFilename;              ///< Current filename
+    parsedInputStruct_t mParsedInput;   ///< Parsed input struct
+    clock_t mStarttime;                 ///< start time for partitioning
+    clock_t mEndtime;                   ///< end time for partitioning
+    state_e mCurrentState;              ///< Current partitioning state
 };
 

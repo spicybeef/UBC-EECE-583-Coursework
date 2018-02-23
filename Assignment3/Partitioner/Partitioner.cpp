@@ -139,19 +139,19 @@ void Partitioner::doPartitioning()
     //             partitionerStruct->totalTempDecrements++;
     //             // Reset the cost tracker
     //             partitionerStruct->costTracker.clear();
-    //	// Check if we haven't accepted anything this past temperature decrement
-    //	if (calculateAcceptanceRate(partitionerStruct->acceptanceTracker) <= ACCEPTANCE_RATE_CUTOFF)
-    //	{
-    //		// We're done!
-    //		partitionerStruct->currentState = STATE_FINISHED;
-    //		// Record finish time
-    //		partitionerStruct->endTime = clock();
-    //	}
-    //	else
-    //	{
-    //		// Reset the acceptance tracker
-    //		partitionerStruct->acceptanceTracker.clear();
-    //	}
+    //  // Check if we haven't accepted anything this past temperature decrement
+    //  if (calculateAcceptanceRate(partitionerStruct->acceptanceTracker) <= ACCEPTANCE_RATE_CUTOFF)
+    //  {
+    //      // We're done!
+    //      partitionerStruct->currentState = STATE_FINISHED;
+    //      // Record finish time
+    //      partitionerStruct->endTime = clock();
+    //  }
+    //  else
+    //  {
+    //      // Reset the acceptance tracker
+    //      partitionerStruct->acceptanceTracker.clear();
+    //  }
     //         }
     //         // We still have swaps to do
     //         else
@@ -165,11 +165,11 @@ void Partitioner::doPartitioning()
     //             swapCells(&partitionerStruct->cells[randPicks[0]], &partitionerStruct->cells[randPicks[1]], partitionerStruct);
     //             // Record the new total half perimeter
     //             newHalfPerimSum = calculateTotalHalfPerim(partitionerStruct->nets);
-    //	// If it's worse than our current worse, store it
-    //	if (static_cast<unsigned int>(newHalfPerimSum) > partitionerStruct->startingHalfPerimSum)
-    //	{
-    //		partitionerStruct->startingHalfPerimSum = newHalfPerimSum;
-    //	}
+    //  // If it's worse than our current worse, store it
+    //  if (static_cast<unsigned int>(newHalfPerimSum) > partitionerStruct->startingHalfPerimSum)
+    //  {
+    //      partitionerStruct->startingHalfPerimSum = newHalfPerimSum;
+    //  }
 
     //             // calculate cost
     //             cost = newHalfPerimSum - oldHalfPerimSum;
@@ -178,16 +178,16 @@ void Partitioner::doPartitioning()
     //             if(newHalfPerimSum >= oldHalfPerimSum)
     //             {
     //                 randomDouble = getRandomDouble();
-    //		//std::cout << "Random double: " << randomDouble << " ";
+    //      //std::cout << "Random double: " << randomDouble << " ";
     //                 // Check if we accept swap
-    //		//std::cout << "Cost: " << static_cast<double>(cost) << " ";
-    //		//std::cout << "Swap exp: " << exp(-1.0 * static_cast<double>(cost) / partitionerStruct->currentTemperature) << std::endl;
-    //		if (cost == 0)
-    //		{
-    //			// No point in doing this
-    //			// Revert cell swap
-    //			swapCells(&partitionerStruct->cells[randPicks[0]], &partitionerStruct->cells[randPicks[1]], partitionerStruct);
-    //		}
+    //      //std::cout << "Cost: " << static_cast<double>(cost) << " ";
+    //      //std::cout << "Swap exp: " << exp(-1.0 * static_cast<double>(cost) / partitionerStruct->currentTemperature) << std::endl;
+    //      if (cost == 0)
+    //      {
+    //          // No point in doing this
+    //          // Revert cell swap
+    //          swapCells(&partitionerStruct->cells[randPicks[0]], &partitionerStruct->cells[randPicks[1]], partitionerStruct);
+    //      }
     //                 else if(randomDouble < exp(-1.0 * static_cast<double>(cost) / partitionerStruct->currentTemperature))
     //                 {
     //                     // Accept the swap!

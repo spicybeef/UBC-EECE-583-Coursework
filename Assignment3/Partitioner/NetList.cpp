@@ -288,7 +288,7 @@ std::vector<sf::RectangleShape> NetList::generatePlacedNodeGeometries()
         //}
         //else
         //{
-        //	placedCells.back().setFillColor(sf::Color(160, 193, 165, 255));
+        //  placedCells.back().setFillColor(sf::Color(160, 193, 165, 255));
         //}
     }
 
