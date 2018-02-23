@@ -130,10 +130,12 @@
   <ItemGroup>
     <ClCompile Include="main.cpp" />
     <ClCompile Include="NetList.cpp" />
+    <ClCompile Include="Partitioner.cpp" />
     <ClCompile Include="Util.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="NetList.h" />
+    <ClInclude Include="main.h" />
     <ClInclude Include="Partitioner.h" />
     <ClInclude Include="Util.h" />
   </ItemGroup>
