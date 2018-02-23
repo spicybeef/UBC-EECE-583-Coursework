@@ -1,5 +1,4 @@
 #include <algorithm>
-#include <iostream>
 
 #include "NetList.h"
 #include "Util.h"
@@ -180,10 +179,6 @@ void NetList::initializeCellProperties()
 	mCellProperties.cellSize = cellSize;
 	mCellProperties.cellOffset = cellOffset;
 	mCellProperties.cellOppositeOffset = cellOppositeOffset;
-
-	std::cout << "Cell size: " << mCellProperties.cellSize << std::endl;
-	std::cout << "Cell offset: " << mCellProperties.cellOffset << std::endl;
-	std::cout << "Cell opposite offset: " << mCellProperties.cellOppositeOffset << std::endl;
 }
 
 std::vector<sf::RectangleShape> NetList::generateGridGeometries()
@@ -318,9 +313,6 @@ void NetList::randomizeNodePlacement()
 {
 	unsigned int i, col, row;
 
-	// Seed our randomizer
-	seedRandom();
-
 	for (i = 0; i < mNodes.size(); i++)
 	{
 		// Put it somewhere randomly on the grid (make sure it's empty)
@@ -340,13 +332,8 @@ void NetList::swapNodePartition(unsigned int id)
 {
 	unsigned int col, row;
 
-	std::cout << "Node: " << id << std::endl;
-
-	// Seed our randomizer
-	seedRandom();
-
-	// Check the orientation of the divider
-	if (mCellProperties.maximizedDim = DIM_VERTICAL)
+	 //Check the orientation of the divider
+	if (mCellProperties.maximizedDim == DIM_VERTICAL)
 	{
 		// Our offset is a column
 		do
@@ -384,11 +371,8 @@ void NetList::swapNodePartition(unsigned int id)
 		while (mGrid[col][row] != nullptr);
 	}
 
-	std::cout << "Old pos: " << mNodes[id].pos.col << " " << mNodes[id].pos.row << " " << std::endl;
-	std::cout << "New pos: " << col << " " << row << " " << std::endl;
-
 	// Update the cell's position
-	 updateNodePosition(id, col, row);
+    updateNodePosition(id, col, row);
 }
 
 void NetList::getNodePosition(unsigned int id, unsigned int * col, unsigned int * row)
@@ -488,10 +472,6 @@ void NetList::updateNetColor(unsigned int id)
 drawPosStruct_t NetList::getGridCellCoordinate(unsigned int col, unsigned int row)
 {
 	drawPosStruct_t drawPos;
-
-	std::cout << "Cell size: " << mCellProperties.cellSize << std::endl;
-	std::cout << "Cell offset: " << mCellProperties.cellOffset << std::endl;
-	std::cout << "Cell opposite offset: " << mCellProperties.cellOppositeOffset << std::endl;
 
 	// Depending on our current maximized direction, return the drawing position for the selected column and row
 	if (mCellProperties.maximizedDim == DIM_VERTICAL)

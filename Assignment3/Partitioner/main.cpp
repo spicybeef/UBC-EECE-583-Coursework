@@ -63,10 +63,20 @@ int main(int argc, char **argv)
     partitioner = new Partitioner();
 
     // Filename to read in is the second argument
-    //partitioner->mFilename = argv[1];
-    partitioner->mFilename = const_cast<char *>("..\\benchmarks\\cm138a.txt");
+    if (!argv[1])
+    {
+        partitioner->mFilename = const_cast<char *>("..\\benchmarks\\cm138a.txt");
+    }
+    else
+    {
+        partitioner->mFilename = argv[1];
+    }
+
     // Parse the input file
-    partitioner->parseInputFile();
+    if (!partitioner->parseInputFile())
+    {
+        return -1;
+    }
     input = partitioner->getParsedInput();
 
     // Instantiate the NetList
@@ -95,11 +105,8 @@ int main(int argc, char **argv)
         partitioner->doPartitioning();
         swapCount++;
         // Only swap every so often
-        
-        if(swapCount > 1000)
+        if(swapCount > 10)
         {
-			seedRandom();
-			//netList->randomizeNodePlacement();
 			netList->swapNodePartition(getRandomInt(partitioner->mParsedInput.numNodes));
 			swapCount = 0;
         }
