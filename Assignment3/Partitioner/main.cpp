@@ -29,6 +29,7 @@ int main(int argc, char **argv)
     std::vector<sf::RectangleShape> backgroundGrid;
     std::vector<sf::RectangleShape> placedCells;
     std::vector<sf::Vertex> netLines;
+	std::vector<sf::Vertex> dividerLine;
 
     // NetList object
     NetList *netList;
@@ -39,6 +40,7 @@ int main(int argc, char **argv)
     sf::RectangleShape background(sf::Vector2f(WIN_GRAPHICPORT_WIDTH, WIN_GRAPHICPORT_HEIGHT));
     background.setPosition(sf::Vector2f(0.f, 0.f));
     background.setFillColor(sf::Color(200, 200, 200, 255));
+
     // Log
     sf::Font font;
     sf::Text text;
@@ -49,6 +51,7 @@ int main(int argc, char **argv)
     text.setFillColor(sf::Color::Green);
     text.setStyle(sf::Text::Regular);
     text.setPosition(sf::Vector2f(0.f + WIN_INFOPORT_PADDING, WIN_VIEWPORT_HEIGHT - WIN_INFOPORT_HEIGHT + WIN_INFOPORT_PADDING));
+
     // Separator
     sf::Vertex line[] =
     {
@@ -60,8 +63,8 @@ int main(int argc, char **argv)
     partitioner = new Partitioner();
 
     // Filename to read in is the second argument
-    partitioner->mFilename = argv[1];
-    //placer->filename = const_cast<char *>("..\\..\\benchmarks\\cm151a.txt");
+    //partitioner->mFilename = argv[1];
+    partitioner->mFilename = const_cast<char *>("..\\benchmarks\\cm138a.txt");
     // Parse the input file
     partitioner->parseInputFile();
     input = partitioner->getParsedInput();
@@ -91,17 +94,16 @@ int main(int argc, char **argv)
         // Run our partitioning
         partitioner->doPartitioning();
         swapCount++;
-        // Only update every so often to speed up process
-        /*
-        if(swapCount < static_cast<unsigned int>(0.01 * static_cast<double>(placer->movesPerTempDec)))
+        // Only swap every so often
+        
+        if(swapCount > 1000)
         {
-            continue;
+			seedRandom();
+			//netList->randomizeNodePlacement();
+			netList->swapNodePartition(getRandomInt(partitioner->mParsedInput.numNodes));
+			swapCount = 0;
         }
-        else
-        {
-            swapCount = 0;
-        }
-        */
+        
 
         sf::Event event;
         while(window.pollEvent(event))
@@ -112,6 +114,8 @@ int main(int argc, char **argv)
                 window.setView(calcView(sf::Vector2u(event.size.width, event.size.height), viewportSize));
         }
 
+		// Get divider line
+		dividerLine = netList->generatePartitionerDivider();
         // Get net lines
         netLines = netList->generateNetGeometries();
         // Get placed cells
@@ -131,6 +135,8 @@ int main(int argc, char **argv)
         {
             window.draw(backgroundGrid[i]);
         }
+		// Draw divider
+		window.draw(&dividerLine.front(), dividerLine.size(), sf::Lines);
 
         // Draw placed cells
         for (i = 0; i < placedCells.size(); i++)

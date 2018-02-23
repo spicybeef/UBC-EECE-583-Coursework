@@ -53,9 +53,6 @@ typedef struct Node
 
 typedef struct
 {
-    unsigned int                                numRows;                ///< Number of rows
-    unsigned int                                numCols;                ///< Number of columns
-
     float                                       cellSize;               ///< Current cellsize
     float                                       cellOffset;             ///< Cell offset for maximized dimension
     float                                       cellOppositeOffset;     ///< Cell offset for other dimension
@@ -84,15 +81,17 @@ private:
     void initializeGridModel();
     void initializeNodes();
     void initializeNets();
+	void initializeNodeNeighbours();
     void initializeNodeNets();
     void initializeNetColors();
     void initializeCellProperties();
 
 public:
-    // These function create the SFML primitives used to draw the partitioner
+    // These function create the SFML primitives used to draw the partitioner objects
     std::vector<sf::RectangleShape> generateGridGeometries();
-    std::vector<sf::Vertex> generateNetGeometries(void);
+    std::vector<sf::Vertex> generateNetGeometries();
     std::vector<sf::RectangleShape> generatePlacedNodeGeometries();
+	std::vector<sf::Vertex> generatePartitionerDivider();
 
     // Node position functions
     void randomizeNodePlacement();
@@ -102,6 +101,9 @@ public:
 
 private:
     // These function are helpers
+	bool doesSegmentCrossDivider(std::vector<sf::Vector2f> segment);
+	std::vector<sf::Vector2f> getDividerVector();
+	nodeStruct_t * getNodePointer(unsigned int id);
     void updateNetColor(unsigned int id);
     drawPosStruct_t getGridCellCoordinate(unsigned int col, unsigned int row);
 
