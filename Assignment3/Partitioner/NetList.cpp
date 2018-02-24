@@ -287,7 +287,7 @@ std::vector<sf::Vertex> NetList::generateNetGeometries()
             netSegment.push_back(sf::Vector2f(cellPointer[0]->drawPos.x, cellPointer[0]->drawPos.y));
             netSegment.push_back(sf::Vector2f(cellPointer[1]->drawPos.x, cellPointer[1]->drawPos.y));
 
-            // Check to see if the segment crosses the divider, if so color it differently
+            // Check to see if the segment crosses the divider; if so, color it differently
             if (doesSegmentCrossDivider(netSegment))
             {
                 color = sf::Color(255, 0, 0, 255);
@@ -396,20 +396,21 @@ std::vector<sf::Vertex> NetList::generatePartitionerDivider()
 
 void NetList::randomizeNodePlacement()
 {
-    unsigned int i, col, row;
+    posStruct_t pos;
+    unsigned int i;
 
     for (i = 0; i < mNodes.size(); i++)
     {
         // Put it somewhere randomly on the grid (make sure it's empty)
         do
         {
-            col = static_cast<unsigned int>(getRandomInt(mNumCols));
-            row = static_cast<unsigned int>(getRandomInt(mNumRows));
+            pos.col = static_cast<unsigned int>(getRandomInt(mNumCols));
+            pos.row = static_cast<unsigned int>(getRandomInt(mNumRows));
         }
-        while (mGrid[col][row] != nullptr);
+        while (mGrid[pos.col][pos.row] != nullptr);
 
         // Update the cell's position
-        updateNodePosition(i, col, row);
+        updateNodePosition(i, pos);
     }
 
     // Update all the gains
@@ -418,6 +419,7 @@ void NetList::randomizeNodePlacement()
 
 void NetList::swapNodePartition(unsigned int id)
 {
+    posStruct_t pos;
     unsigned int col, row;
 
     //Check the orientation of the divider
@@ -460,29 +462,35 @@ void NetList::swapNodePartition(unsigned int id)
     }
 
     // Update the cell's position
-    updateNodePosition(id, col, row);
+    pos.col = col;
+    pos.row = row;
+    updateNodePosition(id, pos);
 }
 
-void NetList::getNodePosition(unsigned int id, unsigned int * col, unsigned int * row)
+posStruct_t NetList::getNodePosition(unsigned int id)
 {
-    *col = mNodes[id].pos.col;
-    *row = mNodes[id].pos.row;
+    posStruct_t pos;
+
+    pos.col = mNodes[id].pos.col;
+    pos.row = mNodes[id].pos.row;
+
+    return pos;
 }
 
-void NetList::updateNodePosition(unsigned int id, unsigned int col, unsigned int row)
+void NetList::updateNodePosition(unsigned int id, posStruct_t pos)
 {
     // Remove the cell from its old position
     mGrid[mNodes[id].pos.col][mNodes[id].pos.row] = nullptr;
 
     // Update the cell's grid position
-    mNodes[id].pos.col = col;
-    mNodes[id].pos.row = row;
+    mNodes[id].pos.col = pos.col;
+    mNodes[id].pos.row = pos.row;
 
     // Update the cell's drawing position
-    mNodes[id].drawPos = getGridCellCoordinate(col, row);
+    mNodes[id].drawPos = getGridCellCoordinate(pos.col, pos.row);
 
     // Add the cell address to the grid
-    mGrid[col][row] = &mNodes[id];
+    mGrid[pos.col][pos.row] = &mNodes[id];
 }
 
 void NetList::lockNode(unsigned int id)
@@ -515,6 +523,39 @@ bool NetList::isNodeLocked(unsigned int id)
     {
         return false;
     }
+}
+
+unsigned int NetList::calculateCurrentCutSize()
+{
+    unsigned int i, j, cutSize;
+    std::vector<sf::Vector2f> netSegment;
+    nodeStruct_t *cellPointer[2];
+
+    cutSize = 0;
+    for (i = 0; i < mNets.size(); i++)
+    {
+        for (j = 0; j < mNets[i].connections.size() - 1; j++)
+        {
+            // Clear the temporary net segment vector
+            netSegment.clear();
+
+            // Get pointers to the two cells in question
+            cellPointer[0] = mNets[i].connections[j];
+            cellPointer[1] = mNets[i].connections[j + 1];
+
+            // Push back the segment
+            netSegment.push_back(sf::Vector2f(cellPointer[0]->drawPos.x, cellPointer[0]->drawPos.y));
+            netSegment.push_back(sf::Vector2f(cellPointer[1]->drawPos.x, cellPointer[1]->drawPos.y));
+
+            // Check to see if the segment crosses the divider; if so, count it
+            if (doesSegmentCrossDivider(netSegment))
+            {
+                cutSize++;
+            }
+        }
+    }
+
+    return cutSize;
 }
 
 int NetList::calculateTotalGain()

@@ -74,8 +74,9 @@ void Partitioner::doPartitioning(NetList &netList)
 {
     std::vector<unsigned int> swapCandidates;
     std::vector<posStruct_t> bestNodePositions;
-    unsigned int i;
-    int currentMaxGain, bestTotalGain;
+    posStruct_t oldPos;
+    unsigned int i, lockCount, bestCutSize;
+    int currentMaxGain, bestSwapGain;
 
     switch (mState)
     {
@@ -89,15 +90,37 @@ void Partitioner::doPartitioning(NetList &netList)
         case STATE_PARTITIONING_START:
             // Unlock all nodes
             netList.unlockAllNodes();
+            // Make best cut size negative (indicates we haven't gotten one yet)
+            mBestCutSize = -1;
             mState = STATE_PARTITIONING_FIND_SWAP_CANDIDATES;
             break;
         case STATE_PARTITIONING_FIND_SWAP_CANDIDATES:
+            // Calculate total gain
+            mCurrentGain = netList.calculateTotalGain();
+            // Calculate the current cut size
+            mCurrentCutSize = netList.calculateCurrentCutSize();
+            // Check if this is better than our current cut size
+            // If our best cut size is negative, then always update
+            if (mCurrentCutSize < mBestCutSize || mBestCutSize < 0)
+            {
+                // New best cut size
+                mBestCutSize = mCurrentCutSize;
+                // Take note of the current node positions for this best cut size
+                bestNodePositions.clear();
+                for (i = 0; i < netList.getNumNodes(); i++)
+                {
+                    bestNodePositions.push_back(netList.getNodePosition(i));
+                }
+            }
             // Go through the node list and find a list of swap candidates (those with the highest gain)
             currentMaxGain = -999;
+            // Keep track of how many are locked
+            lockCount = 0;
             for (i = 0; i < netList.getNumNodes(); i++)
             {
                 if (netList.isNodeLocked(i))
                 {
+                    lockCount++;
                     continue;
                 }
                 // Check if we've got a node with a higher gain that what we currently have
@@ -117,7 +140,34 @@ void Partitioner::doPartitioning(NetList &netList)
                     swapCandidates.push_back(i);
                 }
             }
+            if (lockCount == netList.getNumNodes())
+            {
+                // No more candidates! Reset the board to the best cut
+                for (i = 0; i < netList.getNumNodes(); i++)
+                {
+                    netList.updateNodePosition(i, bestNodePositions[i]);
+                }
+                // Increment our iteration
+                mCurrentIteration++;
+
+                if (mCurrentIteration == MAX_ITERATIONS)
+                {
+                    mState = STATE_FINISHED;
+                }
+                else
+                {
+                    mState = STATE_PARTITIONING_START;
+                }
+            }
             // We should now have some candidates! Time to choose a node tha
+            break;
+        case STATE_PARTITIONING_SWAP_AND_LOCK:
+            // We should have a list of swap candidates
+            // Go through them and find out which has the best swap gain
+            for (i = 0; i < swapCandidates.size(); i++)
+            {
+
+            }
             break;
         case STATE_FINISHED:
             mEndTime = clock();
@@ -147,8 +197,14 @@ std::string Partitioner::getInfoportString()
         case STATE_INIT:
             stringStream << "Starting partitioning!";
             break;
-        case STATE_PARTITIONING:
-            stringStream << "Partitioning...   Elapsed time: " << std::setw(10) << (clock() - mStartTime) / 1000 << "s" << std::endl;
+        case STATE_PARTITIONING_START:
+            stringStream << "Start partitioning...        Elapsed time: " << std::setw(10) << (clock() - mStartTime) / 1000 << "s" << std::endl;
+            break;
+        case STATE_PARTITIONING_FIND_SWAP_CANDIDATES:
+            stringStream << "Finding swap candidates...   Elapsed time: " << std::setw(10) << (clock() - mStartTime) / 1000 << "s" << std::endl;
+            break;
+        case STATE_PARTITIONING_SWAP_AND_LOCK:
+            stringStream << "Swap and locking...          Elapsed time: " << std::setw(10) << (clock() - mStartTime) / 1000 << "s" << std::endl;
             break;
         case STATE_FINISHED:
             stringStream << "* Finished! *  Elapsed time: " << std::setw(10) << (mEndTime - mStartTime) / 1000 << "s" << std::endl;

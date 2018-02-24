@@ -26,8 +26,8 @@ typedef enum
 // Col/row position struct
 typedef struct
 {
-    unsigned int                                row;                    ///< Cell row
-    unsigned int                                col;                    ///< Cell column
+    unsigned int                                col;                    ///< Column
+    unsigned int                                row;                    ///< Row
 } posStruct_t;
 
 // Drawing x/y position struct
@@ -107,14 +107,15 @@ public:
     // Node position functions
     void randomizeNodePlacement();
     void swapNodePartition(unsigned int id);
-    void getNodePosition(unsigned int id, unsigned int *col, unsigned int *row);
-    void updateNodePosition(unsigned int id, unsigned int col, unsigned int row);
+    posStruct_t getNodePosition(unsigned int id);
+    void updateNodePosition(unsigned int id, posStruct_t pos);
 
     // Algorithmic helpers
     void lockNode(unsigned int id);
     void unlockNode(unsigned int id);
     void unlockAllNodes();
     bool isNodeLocked(unsigned int id);
+    unsigned int calculateCurrentCutSize();
     int calculateTotalGain();
     int calculateNodeGain(unsigned int id);
     int getNodeGain(unsigned int id);

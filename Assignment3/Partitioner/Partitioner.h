@@ -46,6 +46,11 @@ public:
     clock_t mEndTime;                   ///< end time for partitioning
     state_e mState;                     ///< Current partitioning state
     int mCurrentGain;                   ///< Keep track of the current gain
+    unsigned int mCurrentCutSize;       ///< Keep track of the current cut size
+    int mBestCutSize;                   ///< Keep track of the best cut size so far
     unsigned int mCurrentIteration;     ///< Current partitioner iteration
+
+private:
+    const unsigned int MAX_ITERATIONS = 6;
 };
 
