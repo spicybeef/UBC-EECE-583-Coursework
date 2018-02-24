@@ -1,33 +1,7 @@
 #pragma once
 
+#include "Types.h"
 #include "NetList.h"
-
-// typedef helpers to make things legible
-typedef std::vector<std::vector<unsigned int>>  netVec;
-
-// partitioning states enum
-typedef enum
-{
-    STATE_INIT = 0,
-    STATE_PARTITIONING_START,
-    STATE_PARTITIONING_FIND_SWAP_CANDIDATES,
-    STATE_PARTITIONING_SWAP_AND_LOCK,
-    STATE_FINISHED,
-    STATE_NUM
-} state_e;
-
-// Parsed input struct
-typedef struct
-{
-    unsigned int                                numRows;                ///< Number of parsed rows
-    unsigned int                                numCols;                ///< Number of parsed columns
-
-    unsigned int                                numNodes;               ///< Number of nodes to place
-    unsigned int                                numConnections;         ///< The number of connections
-
-    netVec                                      nets;                   ///< Parsed nets
-
-} parsedInputStruct_t;
 
 class Partitioner
 {
@@ -47,7 +21,7 @@ public:
     state_e mState;                     ///< Current partitioning state
     int mCurrentGain;                   ///< Keep track of the current gain
     unsigned int mCurrentCutSize;       ///< Keep track of the current cut size
-    int mBestCutSize;                   ///< Keep track of the best cut size so far
+    unsigned int mBestCutSize;                   ///< Keep track of the best cut size so far
     unsigned int mCurrentIteration;     ///< Current partitioner iteration
 
 private:

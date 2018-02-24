@@ -6,77 +6,7 @@
 // SFML Includes
 #include <SFML/Graphics.hpp>
 
-// Program Includes
-#include "Partitioner.h"
-
-// Dimensions enum
-typedef enum
-{
-    DIM_HORIZONTAL = 0,
-    DIM_VERTICAL
-} dimension_e;
-
-// Node state
-typedef enum
-{
-    NODE_STATE_UNLOCKED = 0,
-    NODE_STATE_LOCKED
-} nodeState_e;
-
-// Col/row position struct
-typedef struct
-{
-    unsigned int                                col;                    ///< Column
-    unsigned int                                row;                    ///< Row
-} posStruct_t;
-
-// Drawing x/y position struct
-typedef struct
-{
-    float                                       x;                      ///< X coordinate
-    float                                       y;                      ///< Y coordinate
-} drawPosStruct_t;
-
-// Forward declarations since net and cell structs reference each other
-typedef struct Net netStruct_t;
-typedef struct Node nodeStruct_t;
-
-// Net struct
-typedef struct Net
-{
-    std::vector<nodeStruct_t*>                  connections;            ///< Pointers to the cell's connections
-    sf::Color                                   color;                  ///< Net color
-} netStruct_t;
-
-// Cell struct
-typedef struct Node
-{
-    posStruct_t                                 pos;                    ///< Current position of the cell
-    drawPosStruct_t                             drawPos;                ///< Current drawing position of the cell's center
-
-    nodeState_e                                 state;                  ///< Current node state
-    int                                         gain;                   ///< Current node gain
-
-    netStruct_t                                 *nodeNet;               ///< A pointer to the cell's net, for easy reference
-    std::vector<nodeStruct_t*>                  neighbors;             ///< Pointers to the cell's neighbors
-} nodeStruct_t;
-
-typedef struct
-{
-    float                                       cellSize;               ///< Current cellsize
-    float                                       cellOffset;             ///< Cell offset for maximized dimension
-    float                                       cellOppositeOffset;     ///< Cell offset for other dimension
-
-    dimension_e                                 maximizedDim;           ///< Current maximized dimension
-
-    unsigned int                                divider;                ///< Column or row that starts the partition
-
-} cellPropertiesStruct_t;
-
-// typedef helpers to make things legible
-typedef std::vector<nodeStruct_t*> gridRowVec;
-typedef std::vector<gridRowVec> gridColVec;
-typedef gridColVec gridVec;
+#include "Types.h"
 
 class NetList
 {
@@ -107,6 +37,7 @@ public:
     // Node position functions
     void randomizeNodePlacement();
     void swapNodePartition(unsigned int id);
+    unsigned int getNodePartition(unsigned int id);
     posStruct_t getNodePosition(unsigned int id);
     void updateNodePosition(unsigned int id, posStruct_t pos);
 

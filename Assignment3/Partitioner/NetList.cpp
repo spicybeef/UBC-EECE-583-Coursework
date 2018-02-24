@@ -2,7 +2,8 @@
 
 #include "NetList.h"
 #include "Util.h"
-#include "main.h"
+#include "Types.h"
+#include "Constants.h"
 
 NetList::NetList(parsedInputStruct_t parsedInput)
 {
@@ -397,17 +398,38 @@ std::vector<sf::Vertex> NetList::generatePartitionerDivider()
 void NetList::randomizeNodePlacement()
 {
     posStruct_t pos;
-    unsigned int i;
+    unsigned int i, count;
 
+    count = 0;
     for (i = 0; i < mNodes.size(); i++)
     {
         // Put it somewhere randomly on the grid (make sure it's empty)
-        do
+        // We must distribute them equally across the partition
+        // We will use the first bit of a counter to toggle between ranges
+        if (mCellProperties.maximizedDim == DIM_VERTICAL)
         {
-            pos.col = static_cast<unsigned int>(getRandomInt(mNumCols));
-            pos.row = static_cast<unsigned int>(getRandomInt(mNumRows));
+            do
+            {
+                // Column will switch between two ranges
+                pos.col = static_cast<unsigned int>(getRandomInt(mNumCols / 2) + (count & 0x1) * (mNumCols / 2));
+                // Row is always full range random
+                pos.row = static_cast<unsigned int>(getRandomInt(mNumRows));
+            }
+            while (mGrid[pos.col][pos.row] != nullptr);
         }
-        while (mGrid[pos.col][pos.row] != nullptr);
+        else
+        {
+            do
+            {
+                // Col is always full range random
+                pos.col = static_cast<unsigned int>(getRandomInt(mNumCols));
+                // Row will switch between two ranges
+                pos.row = static_cast<unsigned int>(getRandomInt(mNumRows / 2) + (count & 0x1) * (mNumRows / 2));
+            }
+            while (mGrid[pos.col][pos.row] != nullptr);
+        }
+        // Increment the count
+        count++;
 
         // Update the cell's position
         updateNodePosition(i, pos);
@@ -465,6 +487,39 @@ void NetList::swapNodePartition(unsigned int id)
     pos.col = col;
     pos.row = row;
     updateNodePosition(id, pos);
+}
+
+unsigned int NetList::getNodePartition(unsigned int id)
+{
+    unsigned int partition;
+    // Partition 0 will be the lower ranger, and partition 1 will be the upper range
+    // The current maximized dimension determines the partition we are in
+    if (mCellProperties.maximizedDim == DIM_VERTICAL)
+    {
+        // Column will determine the partition number
+        if (mNodes[id].pos.col < mNumCols / 2)
+        {
+            partition = 0;
+        }
+        else
+        {
+            partition = 1;
+        }
+    }
+    else
+    {
+        // Row will determine the partition number
+        if (mNodes[id].pos.row < mNumRows / 2)
+        {
+            partition = 0;
+        }
+        else
+        {
+            partition = 1;
+        }
+    }
+
+    return partition;
 }
 
 posStruct_t NetList::getNodePosition(unsigned int id)
@@ -624,7 +679,7 @@ void NetList::updateAllNodeGains()
 
 unsigned int NetList::getNumNodes()
 {
-    return mNodes.size();
+    return static_cast<unsigned int>(mNodes.size());
 }
 
 bool NetList::doesSegmentCrossDivider(std::vector<sf::Vector2f> segment)

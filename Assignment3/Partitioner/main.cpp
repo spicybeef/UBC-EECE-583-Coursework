@@ -10,10 +10,12 @@
 #include <SFML/Graphics.hpp>
 
 // Program Includes
+#include "Types.h"
 #include "Partitioner.h"
 #include "NetList.h"
 #include "Util.h"
-#include "main.h"
+#include "Types.h"
+#include "Constants.h"
 
 int main(int argc, char **argv)
 {
@@ -64,6 +66,7 @@ int main(int argc, char **argv)
     partitioner = new Partitioner();
 
     // Filename to read in is the second argument
+    // If no argument is given, load up a default input file
     if (!argv[1])
     {
         partitioner->mFilename = const_cast<char *>("..\\benchmarks\\cm162a.txt");
@@ -98,16 +101,14 @@ int main(int argc, char **argv)
     swapCount = 0;
     while(window.isOpen())
     { 
-        // Run our partitioning
-        partitioner->doPartitioning();
         swapCount++;
         // Only swap every so often
-        //if(swapCount > 1000)
-        //{
-        //    netList->swapNodePartition(getRandomInt(partitioner->mParsedInput.numNodes));
-        //    netList->updateAllNodeGains();
-        //    swapCount = 0;
-        //}
+        if(swapCount > 1000)
+        {
+            // Run our partitioning
+            partitioner->doPartitioning(*netList);
+            swapCount = 0;
+        }
         
 
         sf::Event event;

@@ -9,6 +9,7 @@
 
 Partitioner::Partitioner()
 {
+    mState = STATE_INIT;
 }
 
 
@@ -74,9 +75,9 @@ void Partitioner::doPartitioning(NetList &netList)
 {
     std::vector<unsigned int> swapCandidates;
     std::vector<posStruct_t> bestNodePositions;
-    posStruct_t oldPos;
-    unsigned int i, lockCount, bestCutSize;
-    int currentMaxGain, bestSwapGain;
+    std::vector<unsigned int> partitionPopulation[2];
+    unsigned int i, lockCount ;
+    int currentMaxGain;
 
     switch (mState)
     {
@@ -85,6 +86,11 @@ void Partitioner::doPartitioning(NetList &netList)
             mStartTime = clock();
             // Place the nodes at random
             netList.randomizeNodePlacement();
+            // Record the partition where each node is in
+            for (i = 0; i < netList.getNumNodes(); i++)
+            {
+                partitionPopulation[netList.getNodePartition(i)].push_back(i);
+            }
             mState = STATE_PARTITIONING_START;
             break;
         case STATE_PARTITIONING_START:
@@ -162,12 +168,6 @@ void Partitioner::doPartitioning(NetList &netList)
             // We should now have some candidates! Time to choose a node tha
             break;
         case STATE_PARTITIONING_SWAP_AND_LOCK:
-            // We should have a list of swap candidates
-            // Go through them and find out which has the best swap gain
-            for (i = 0; i < swapCandidates.size(); i++)
-            {
-
-            }
             break;
         case STATE_FINISHED:
             mEndTime = clock();
