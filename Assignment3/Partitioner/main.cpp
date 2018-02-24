@@ -85,10 +85,6 @@ int main(int argc, char **argv)
 
     // Get a grid, only need to do this once since it is static
     backgroundGrid = netList->generateGridGeometries();
-
-    // Place the cells at random
-    netList->randomizeNodePlacement();
-
     
     // Create our render window object
     // Give it a default type (titlebar, close button)

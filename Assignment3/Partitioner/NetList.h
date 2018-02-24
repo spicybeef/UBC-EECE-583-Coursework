@@ -114,9 +114,12 @@ public:
     void lockNode(unsigned int id);
     void unlockNode(unsigned int id);
     void unlockAllNodes();
-    int calculateTotalCost();
+    bool isNodeLocked(unsigned int id);
+    int calculateTotalGain();
     int calculateNodeGain(unsigned int id);
+    int getNodeGain(unsigned int id);
     void updateAllNodeGains();
+    unsigned int getNumNodes();
 
 private:
     // These function are helpers

@@ -505,9 +505,32 @@ void NetList::unlockAllNodes()
     }
 }
 
-int NetList::calculateTotalCost()
+bool NetList::isNodeLocked(unsigned int id)
 {
-    return 0;
+    if (mNodes[id].state = NODE_STATE_LOCKED)
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+int NetList::calculateTotalGain()
+{
+    unsigned int i;
+    int totalGain;
+
+    updateAllNodeGains();
+
+    totalGain = 0;
+    for (i = 0; i < mNodes.size(); i++)
+    {
+        totalGain += mNodes[i].gain;
+    }
+
+    return totalGain;
 }
 
 int NetList::calculateNodeGain(unsigned int id)
@@ -542,6 +565,12 @@ int NetList::calculateNodeGain(unsigned int id)
     return currentGain;
 }
 
+int NetList::getNodeGain(unsigned int id)
+{
+    // This won't recalculate
+    return mNodes[id].gain;
+}
+
 void NetList::updateAllNodeGains()
 {
     unsigned int i;
@@ -550,6 +579,11 @@ void NetList::updateAllNodeGains()
     {
         calculateNodeGain(i);
     }
+}
+
+unsigned int NetList::getNumNodes()
+{
+    return mNodes.size();
 }
 
 bool NetList::doesSegmentCrossDivider(std::vector<sf::Vector2f> segment)
