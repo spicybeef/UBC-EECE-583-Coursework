@@ -16,6 +16,13 @@ typedef enum
     DIM_VERTICAL
 } dimension_e;
 
+// Node state
+typedef enum
+{
+    NODE_STATE_UNLOCKED = 0,
+    NODE_STATE_LOCKED
+} nodeState_e;
+
 // Col/row position struct
 typedef struct
 {
@@ -47,8 +54,11 @@ typedef struct Node
     posStruct_t                                 pos;                    ///< Current position of the cell
     drawPosStruct_t                             drawPos;                ///< Current drawing position of the cell's center
 
+    nodeState_e                                 state;                  ///< Current node state
+    int                                         gain;                   ///< Current node gain
+
     netStruct_t                                 *nodeNet;               ///< A pointer to the cell's net, for easy reference
-    std::vector<nodeStruct_t*>                  neighbours;             ///< Pointers to the cell's neighbours
+    std::vector<nodeStruct_t*>                  neighbors;             ///< Pointers to the cell's neighbors
 } nodeStruct_t;
 
 typedef struct
@@ -91,6 +101,7 @@ public:
     std::vector<sf::RectangleShape> generateGridGeometries();
     std::vector<sf::Vertex> generateNetGeometries();
     std::vector<sf::RectangleShape> generatePlacedNodeGeometries();
+    std::vector<sf::Text> generatePlacedNodeText();
     std::vector<sf::Vertex> generatePartitionerDivider();
 
     // Node position functions
@@ -98,6 +109,14 @@ public:
     void swapNodePartition(unsigned int id);
     void getNodePosition(unsigned int id, unsigned int *col, unsigned int *row);
     void updateNodePosition(unsigned int id, unsigned int col, unsigned int row);
+
+    // Algorithmic helpers
+    void lockNode(unsigned int id);
+    void unlockNode(unsigned int id);
+    void unlockAllNodes();
+    int calculateTotalCost();
+    int calculateNodeGain(unsigned int id);
+    void updateAllNodeGains();
 
 private:
     // These function are helpers
@@ -116,5 +135,7 @@ private:
     std::vector<netStruct_t> mNets;         ///< Nets
     cellPropertiesStruct_t mCellProperties; ///< Grid cell properties
     parsedInputStruct_t mParsedInput;       ///< Struct containing the parsed input from the file
+
+    sf::Font mFont;                         ///< Store a copy of the font we'll be using
 };
 

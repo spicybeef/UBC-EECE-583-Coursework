@@ -18,8 +18,13 @@ NetList::NetList(parsedInputStruct_t parsedInput)
     initializeNodes();
     initializeNets();
     initializeNodeNets();
+    initializeNodeNeighbours();
     initializeNetColors();
     initializeCellProperties();
+
+    // Create the font
+    //mFont.loadFromFile("consola.ttf");
+    mFont.loadFromFile("C:\\Windows\\Fonts\\consola.ttf");
 }
 
 NetList::~NetList()
@@ -62,6 +67,10 @@ void NetList::initializeNodes()
         mNodes.push_back(nodeStruct_t());
         // Null the net pointer
         mNodes.back().nodeNet = nullptr;
+        // Initialize node gain to 0
+        mNodes.back().gain = 0;
+        // Set the node unlocked
+        unlockNode(i);
     }
 }
 
@@ -90,16 +99,56 @@ void NetList::initializeNets()
 
 void NetList::initializeNodeNeighbours()
 {
-    unsigned int i, j;
+    unsigned int i, j, k;
+    bool found;
 
-    // Go through the nets and its connections, and update all of the nodes' neighbours
+    // Go through the nets and its connections, and update all of the nodes' neighbors
     for (i = 0; i < mNets.size(); i++)
     {
         for (j = 0; j < mNets[i].connections.size() - 1; j++)
         {
-            // Make these nodes neighbours
-            mNets[i].connections[j]->neighbours.push_back(mNets[i].connections[j + 1]);
-            mNets[i].connections[j + 1]->neighbours.push_back(mNets[i].connections[j]);
+            // Make these nodes neighbors
+            // Make sure the connection doesn't already exist
+            // This feels inefficient, likely a better way to check
+            // Will let it slide since this only happens on NetList construction
+
+            // First pass for the forward connection...
+            found = false;
+            for (k = 0; k < mNets[i].connections[j]->neighbors.size(); k++)
+            {
+                if (mNets[i].connections[j]->neighbors[k] == mNets[i].connections[j + 1])
+                {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found)
+            {
+                mNets[i].connections[j]->neighbors.push_back(mNets[i].connections[j + 1]);
+            }
+            else
+            {
+                found = false;
+            }
+
+            // Second pass for the backwards connection...
+            found = false;
+            for (k = 0; k < mNets[i].connections[j + 1]->neighbors.size(); k++)
+            {
+                if (mNets[i].connections[j + 1]->neighbors[k] == mNets[i].connections[j])
+                {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found)
+            {
+                mNets[i].connections[j + 1]->neighbors.push_back(mNets[i].connections[j]);
+            }
+            else
+            {
+                found = false;
+            }
         }
     }
 }
@@ -282,17 +331,53 @@ std::vector<sf::RectangleShape> NetList::generatePlacedNodeGeometries()
         placedCells.back().setSize(sf::Vector2f(mCellProperties.cellSize * CELL_SHRINK_FACTOR, mCellProperties.cellSize * CELL_SHRINK_FACTOR));
         placedCells.back().setOrigin(sf::Vector2f(mCellProperties.cellSize * CELL_SHRINK_FACTOR * 0.5f, mCellProperties.cellSize * CELL_SHRINK_FACTOR * 0.5f));
 
-        //if (state == STATE_PARTITIONING)
-        //{
-        placedCells.back().setFillColor(sf::Color(180, 180, 180, 255));
-        //}
-        //else
-        //{
-        //  placedCells.back().setFillColor(sf::Color(160, 193, 165, 255));
-        //}
+        if (mNodes[i].state == NODE_STATE_LOCKED)
+        {
+            placedCells.back().setFillColor(sf::Color(244, 86, 66, 255)); // Redish
+        }
+        else
+        {
+            placedCells.back().setFillColor(sf::Color(160, 193, 165, 255)); // Greenish
+        }
     }
 
     return placedCells;
+}
+
+std::vector<sf::Text> NetList::generatePlacedNodeText()
+{
+    std::vector<sf::Text> placedCellsText;
+    unsigned int i;
+
+    for (i = 0; i < mNodes.size(); i++)
+    {
+        placedCellsText.push_back(sf::Text());
+
+        placedCellsText.back().setString(std::to_string(mNodes[i].gain));
+
+        if (mCellProperties.maximizedDim == DIM_VERTICAL)
+        {
+            placedCellsText.back().setPosition(
+                static_cast<float>((mNodes[i].pos.col * mCellProperties.cellSize) + mCellProperties.cellOppositeOffset),
+                static_cast<float>((mNodes[i].pos.row * mCellProperties.cellSize) + mCellProperties.cellOffset)
+            );
+        }
+        else
+        {
+            placedCellsText.back().setPosition(
+                static_cast<float>((mNodes[i].pos.col * mCellProperties.cellSize) + mCellProperties.cellOffset),
+                static_cast<float>((mNodes[i].pos.row * mCellProperties.cellSize) + mCellProperties.cellOppositeOffset)
+            );
+        }
+        placedCellsText.back().setFont(mFont);
+        placedCellsText.back().setCharacterSize(15);
+        placedCellsText.back().setFillColor(sf::Color::Black);
+        placedCellsText.back().setStyle(sf::Text::Regular);
+
+        placedCellsText.back().setOrigin(sf::Vector2f(mCellProperties.cellSize * CELL_SHRINK_FACTOR * 0.5f, mCellProperties.cellSize * CELL_SHRINK_FACTOR * 0.5f));
+    }
+
+    return placedCellsText;
 }
 
 std::vector<sf::Vertex> NetList::generatePartitionerDivider()
@@ -326,13 +411,16 @@ void NetList::randomizeNodePlacement()
         // Update the cell's position
         updateNodePosition(i, col, row);
     }
+
+    // Update all the gains
+    updateAllNodeGains();
 }
 
 void NetList::swapNodePartition(unsigned int id)
 {
     unsigned int col, row;
 
-     //Check the orientation of the divider
+    //Check the orientation of the divider
     if (mCellProperties.maximizedDim == DIM_VERTICAL)
     {
         // Our offset is a column
@@ -395,6 +483,73 @@ void NetList::updateNodePosition(unsigned int id, unsigned int col, unsigned int
 
     // Add the cell address to the grid
     mGrid[col][row] = &mNodes[id];
+}
+
+void NetList::lockNode(unsigned int id)
+{
+    mNodes[id].state = NODE_STATE_LOCKED;
+}
+
+void NetList::unlockNode(unsigned int id)
+{
+    mNodes[id].state = NODE_STATE_UNLOCKED;
+}
+
+void NetList::unlockAllNodes()
+{
+    unsigned int i;
+
+    for (i = 0; i < mNodes.size(); i++)
+    {
+        mNodes[i].state = NODE_STATE_UNLOCKED;
+    }
+}
+
+int NetList::calculateTotalCost()
+{
+    return 0;
+}
+
+int NetList::calculateNodeGain(unsigned int id)
+{
+    std::vector<sf::Vector2f> netSegment;
+    nodeStruct_t * neighborPointer;
+    unsigned int i;
+    int currentGain = 0;
+
+    // Origin of the segment is the node we are on
+    netSegment.push_back(sf::Vector2f(mNodes[id].drawPos.x, mNodes[id].drawPos.y));
+    // Push back the other end with a dummy
+    netSegment.push_back(sf::Vector2f());
+    // Go through each neighbour and check if we cross the boundary
+    for (i = 0; i < mNodes[id].neighbors.size(); i++)
+    {
+        neighborPointer = mNodes[id].neighbors[i];
+        netSegment[1] = sf::Vector2f(neighborPointer->drawPos.x, neighborPointer->drawPos.y);
+
+        if (doesSegmentCrossDivider(netSegment))
+        {
+            currentGain++;
+        }
+        else
+        {
+            currentGain--;
+        }
+    }
+
+    mNodes[id].gain = currentGain;
+
+    return currentGain;
+}
+
+void NetList::updateAllNodeGains()
+{
+    unsigned int i;
+
+    for (i = 0; i < mNodes.size(); i++)
+    {
+        calculateNodeGain(i);
+    }
 }
 
 bool NetList::doesSegmentCrossDivider(std::vector<sf::Vector2f> segment)

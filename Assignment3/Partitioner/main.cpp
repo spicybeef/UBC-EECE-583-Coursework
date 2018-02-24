@@ -28,6 +28,7 @@ int main(int argc, char **argv)
     // Drawing components
     std::vector<sf::RectangleShape> backgroundGrid;
     std::vector<sf::RectangleShape> placedCells;
+    std::vector<sf::Text> placedCellsText;
     std::vector<sf::Vertex> netLines;
     std::vector<sf::Vertex> dividerLine;
 
@@ -65,7 +66,7 @@ int main(int argc, char **argv)
     // Filename to read in is the second argument
     if (!argv[1])
     {
-        partitioner->mFilename = const_cast<char *>("..\\benchmarks\\cm138a.txt");
+        partitioner->mFilename = const_cast<char *>("..\\benchmarks\\cm162a.txt");
     }
     else
     {
@@ -105,11 +106,12 @@ int main(int argc, char **argv)
         partitioner->doPartitioning();
         swapCount++;
         // Only swap every so often
-        if(swapCount > 10)
-        {
-            netList->swapNodePartition(getRandomInt(partitioner->mParsedInput.numNodes));
-            swapCount = 0;
-        }
+        //if(swapCount > 1000)
+        //{
+        //    netList->swapNodePartition(getRandomInt(partitioner->mParsedInput.numNodes));
+        //    netList->updateAllNodeGains();
+        //    swapCount = 0;
+        //}
         
 
         sf::Event event;
@@ -127,6 +129,8 @@ int main(int argc, char **argv)
         netLines = netList->generateNetGeometries();
         // Get placed cells
         placedCells = netList->generatePlacedNodeGeometries();
+        // Get placed cells text
+        placedCellsText = netList->generatePlacedNodeText();
 
         // Clear window
         window.clear();
@@ -145,10 +149,11 @@ int main(int argc, char **argv)
         // Draw divider
         window.draw(&dividerLine.front(), dividerLine.size(), sf::Lines);
 
-        // Draw placed cells
+        // Draw placed cells and their text
         for (i = 0; i < placedCells.size(); i++)
         {
             window.draw(placedCells[i]);
+            window.draw(placedCellsText[i]);
         }
         // Draw net lines
         window.draw(&netLines.front(), netLines.size(), sf::Lines);
