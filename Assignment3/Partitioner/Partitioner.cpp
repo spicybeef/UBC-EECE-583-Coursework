@@ -79,7 +79,9 @@ void Partitioner::doPartitioning(NetList &netList)
     switch (mState)
     {
         case STATE_INIT:
+            // Initialize iteration counter
             mCurrentIteration = 0;
+            // Get start time
             mStartTime = clock();
             // Place the nodes at random
             netList.randomizeNodePlacement();
@@ -88,8 +90,12 @@ void Partitioner::doPartitioning(NetList &netList)
             {
                 mPartitionNodeList[netList.getNodePartition(i)].push_back(i);
             }
+            // Calculate the starting cut size
+            mStartCutSize = netList.calculateCurrentCutSize();
+            // Start partitioning
             mState = STATE_PARTITIONING_START;
             break;
+
         case STATE_PARTITIONING_START:
             // Unlock all nodes
             netList.unlockAllNodes();
@@ -97,6 +103,7 @@ void Partitioner::doPartitioning(NetList &netList)
             mBestCutSize = -1;
             mState = STATE_PARTITIONING_FIND_SWAP_CANDIDATES;
             break;
+
         case STATE_PARTITIONING_FIND_SWAP_CANDIDATES:
 
             // Calculate total gain
@@ -188,6 +195,8 @@ void Partitioner::doPartitioning(NetList &netList)
                 // Check if we've reached our max iterations
                 if (mCurrentIteration == MAX_ITERATIONS)
                 {
+                    // Record end time and finish
+                    mEndTime = clock();
                     mState = STATE_FINISHED;
                 }
                 else
@@ -221,7 +230,6 @@ void Partitioner::doPartitioning(NetList &netList)
             mState = STATE_PARTITIONING_FIND_SWAP_CANDIDATES;
             break;
         case STATE_FINISHED:
-            mEndTime = clock();
             break;
         default:
             break;
@@ -234,6 +242,7 @@ std::string Partitioner::getInfoportString()
 
     stringStream << std::fixed << std::setprecision(3);
     stringStream << "Curr Gain:   " << std::setw(12) << mCurrentGain << "   ";
+    stringStream << "Start Cut:   " << std::setw(12) << mStartCutSize << "   ";
     stringStream << "Current Cut: " << std::setw(12) << mCurrentCutSize << "   ";
     stringStream << "Best Cut:    " << std::setw(12) << mBestCutSize << "   ";
     //stringStream << "Improvement: " << std::setw(11) << 100.0 * static_cast<double>(difference) / static_cast<double>(partitionerStruct->startingHalfPerimSum) << "%   " << std::endl;

@@ -73,6 +73,7 @@ int main(int argc, char **argv)
     if (!argv[1])
     {
         partitioner->mFilename = const_cast<char *>("..\\benchmarks\\cm162a.txt");
+        //partitioner->mFilename = const_cast<char *>("..\\benchmarks\\apex4.txt");
     }
     else
     {
@@ -104,16 +105,12 @@ int main(int argc, char **argv)
     swapCount = 0;
     while(window.isOpen())
     { 
-        swapCount++;
-        // Only swap every so often
-        //if(swapCount > 1000)
-        //{
-            // Run our partitioning
+        // Run the partitioning for the number of nodes we have
+        for(i = 0; i < netList->getNumNodes()*0.1; i++)
+        {
             partitioner->doPartitioning(*netList);
-        //    swapCount = 0;
-        //}
+        }
         
-
         sf::Event event;
         while(window.pollEvent(event))
         {

@@ -400,6 +400,9 @@ void NetList::randomizeNodePlacement()
     posStruct_t pos;
     unsigned int i, count;
 
+    // Shuffle the node list
+    std::random_shuffle(mNodes.begin(), mNodes.end());
+
     count = 0;
     for (i = 0; i < mNodes.size(); i++)
     {
@@ -636,6 +639,7 @@ int NetList::calculateNodeGain(unsigned int id)
     unsigned int i;
     int currentGain = 0;
 
+    // 
     // Origin of the segment is the node we are on
     netSegment.push_back(sf::Vector2f(mNodes[id].drawPos.x, mNodes[id].drawPos.y));
     // Push back the other end with a dummy
