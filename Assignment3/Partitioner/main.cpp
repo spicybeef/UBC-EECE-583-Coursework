@@ -39,6 +39,9 @@ int main(int argc, char **argv)
     // Partitioner object
     Partitioner *partitioner;
 
+    // Seed the random number generator
+    seedRandom();
+
     // Background
     sf::RectangleShape background(sf::Vector2f(WIN_GRAPHICPORT_WIDTH, WIN_GRAPHICPORT_HEIGHT));
     background.setPosition(sf::Vector2f(0.f, 0.f));
@@ -103,12 +106,12 @@ int main(int argc, char **argv)
     { 
         swapCount++;
         // Only swap every so often
-        if(swapCount > 1000)
-        {
+        //if(swapCount > 1000)
+        //{
             // Run our partitioning
             partitioner->doPartitioning(*netList);
-            swapCount = 0;
-        }
+        //    swapCount = 0;
+        //}
         
 
         sf::Event event;

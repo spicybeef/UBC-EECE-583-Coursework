@@ -73,11 +73,8 @@ parsedInputStruct_t Partitioner::getParsedInput()
 
 void Partitioner::doPartitioning(NetList &netList)
 {
-    std::vector<unsigned int> swapCandidates;
-    std::vector<posStruct_t> bestNodePositions;
-    std::vector<unsigned int> partitionPopulation[2];
-    unsigned int i, lockCount ;
-    int currentMaxGain;
+    unsigned int i, lockCount, candidateIndex, candidateNodeId;
+    int currentMaxGain, candidateGain;
 
     switch (mState)
     {
@@ -89,7 +86,7 @@ void Partitioner::doPartitioning(NetList &netList)
             // Record the partition where each node is in
             for (i = 0; i < netList.getNumNodes(); i++)
             {
-                partitionPopulation[netList.getNodePartition(i)].push_back(i);
+                mPartitionNodeList[netList.getNodePartition(i)].push_back(i);
             }
             mState = STATE_PARTITIONING_START;
             break;
@@ -101,8 +98,10 @@ void Partitioner::doPartitioning(NetList &netList)
             mState = STATE_PARTITIONING_FIND_SWAP_CANDIDATES;
             break;
         case STATE_PARTITIONING_FIND_SWAP_CANDIDATES:
+
             // Calculate total gain
             mCurrentGain = netList.calculateTotalGain();
+
             // Calculate the current cut size
             mCurrentCutSize = netList.calculateCurrentCutSize();
             // Check if this is better than our current cut size
@@ -112,50 +111,81 @@ void Partitioner::doPartitioning(NetList &netList)
                 // New best cut size
                 mBestCutSize = mCurrentCutSize;
                 // Take note of the current node positions for this best cut size
-                bestNodePositions.clear();
+                mBestNodePositions.clear();
                 for (i = 0; i < netList.getNumNodes(); i++)
                 {
-                    bestNodePositions.push_back(netList.getNodePosition(i));
+                    mBestNodePositions.push_back(netList.getNodePosition(i));
                 }
             }
+
+            // Determine which partition we are swapping from
+            // If size of 0 is greater than 1, then swap from 0
+            if (mPartitionNodeList[0].size() > mPartitionNodeList[1].size())
+            {
+                mCurrentPartition = 0;
+            }
+            // If we're equal, pick a random one to swap from
+            // This has the issue of possibly getting an uneven amount of locks, disabled for now
+            //else if(mPartitionNodeList[0].size() == mPartitionNodeList[1].size())
+            //{
+            //    currentPartition = getRandomInt(1);
+            //}
+            // Else size of 1 is greater than 0, swap from 1
+            else
+            {
+                mCurrentPartition = 1;
+            }
+
             // Go through the node list and find a list of swap candidates (those with the highest gain)
             currentMaxGain = -999;
             // Keep track of how many are locked
             lockCount = 0;
-            for (i = 0; i < netList.getNumNodes(); i++)
+            // Clear out swap candidates
+            mSwapCandidates.clear();
+            for (i = 0; i < mPartitionNodeList[mCurrentPartition].size(); i++)
             {
-                if (netList.isNodeLocked(i))
+                // Go to the next one if it's locked
+                if (netList.isNodeLocked(mPartitionNodeList[mCurrentPartition][i]))
                 {
                     lockCount++;
                     continue;
                 }
-                // Check if we've got a node with a higher gain that what we currently have
-                if (netList.getNodeGain(i) > currentMaxGain)
+                // New candidate
+                candidateIndex = i;
+                candidateGain = netList.getNodeGain(mPartitionNodeList[mCurrentPartition][i]);
+                // Check if it has higher gain that what we currently have
+                if (candidateGain > currentMaxGain)
                 {
-                    // Clear out swap candidates
-                    swapCandidates.clear();
+                    // We have a new candidate!
                     // New max gain
-                    currentMaxGain = netList.getNodeGain(i);
+                    currentMaxGain = candidateGain;
+                    // Clear out the old swap candidates
+                    mSwapCandidates.clear();
                     // Push back the first candidate
-                    swapCandidates.push_back(i);
+                    mSwapCandidates.push_back(candidateIndex);
                 }
                 // Check if we have a candidate with the same gain
-                else if (netList.getNodeGain(i) == currentMaxGain)
+                else if (candidateGain == currentMaxGain)
                 {
                     // We have another candidate
-                    swapCandidates.push_back(i);
+                    mSwapCandidates.push_back(candidateIndex);
                 }
             }
-            if (lockCount == netList.getNumNodes())
+
+            // We should now have some candidates now
+            mState = STATE_PARTITIONING_SWAP_AND_LOCK;
+
+            // Check if the entire partition node list is locked
+            if (lockCount == mPartitionNodeList[mCurrentPartition].size())
             {
                 // No more candidates! Reset the board to the best cut
                 for (i = 0; i < netList.getNumNodes(); i++)
                 {
-                    netList.updateNodePosition(i, bestNodePositions[i]);
+                    netList.updateNodePosition(i, mBestNodePositions[i]);
                 }
                 // Increment our iteration
                 mCurrentIteration++;
-
+                // Check if we've reached our max iterations
                 if (mCurrentIteration == MAX_ITERATIONS)
                 {
                     mState = STATE_FINISHED;
@@ -165,9 +195,30 @@ void Partitioner::doPartitioning(NetList &netList)
                     mState = STATE_PARTITIONING_START;
                 }
             }
-            // We should now have some candidates! Time to choose a node tha
+
             break;
         case STATE_PARTITIONING_SWAP_AND_LOCK:
+            // Choose a candidate at random
+            candidateIndex = getRandomInt(static_cast<unsigned int>(mSwapCandidates.size()));
+            candidateNodeId = mPartitionNodeList[mCurrentPartition][candidateIndex];
+            // Clear the swap candidates
+            mSwapCandidates.clear();
+            // Swap it
+            netList.swapNodePartition(candidateNodeId);
+            // Lock it
+            netList.lockNode(candidateNodeId);
+            // Move it to the other partition node list
+            mPartitionNodeList[mCurrentPartition].erase(mPartitionNodeList[mCurrentPartition].begin() + candidateIndex);
+            if (mCurrentPartition == 0)
+            {
+                mPartitionNodeList[1].push_back(candidateNodeId);
+            }
+            else
+            {
+                mPartitionNodeList[0].push_back(candidateNodeId);
+            }
+            // Find some more candidates
+            mState = STATE_PARTITIONING_FIND_SWAP_CANDIDATES;
             break;
         case STATE_FINISHED:
             mEndTime = clock();
@@ -183,8 +234,8 @@ std::string Partitioner::getInfoportString()
 
     stringStream << std::fixed << std::setprecision(3);
     stringStream << "Curr Gain:   " << std::setw(12) << mCurrentGain << "   ";
-    //stringStream << "Worst HPS:   " << std::setw(12) << partitionerStruct->startingHalfPerimSum << "   ";
-    //stringStream << "Current HPS: " << std::setw(12) << partitionerStruct->currentHalfPerimSum << "   ";
+    stringStream << "Current Cut: " << std::setw(12) << mCurrentCutSize << "   ";
+    stringStream << "Best Cut:    " << std::setw(12) << mBestCutSize << "   ";
     //stringStream << "Improvement: " << std::setw(11) << 100.0 * static_cast<double>(difference) / static_cast<double>(partitionerStruct->startingHalfPerimSum) << "%   " << std::endl;
     //stringStream << "Start Temp:  " << std::setw(12) << partitionerStruct->startTemperature << "   ";
     //stringStream << "Decrements:  " << std::setw(12) << partitionerStruct->totalTempDecrements << "   ";

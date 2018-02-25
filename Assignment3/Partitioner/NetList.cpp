@@ -570,7 +570,7 @@ void NetList::unlockAllNodes()
 
 bool NetList::isNodeLocked(unsigned int id)
 {
-    if (mNodes[id].state = NODE_STATE_LOCKED)
+    if (mNodes[id].state == NODE_STATE_LOCKED)
     {
         return true;
     }
