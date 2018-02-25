@@ -2,23 +2,16 @@
 #include <sstream>
 #include <ctime>
 #include <cstdlib>
+#include <random>
 
 #include "Util.h"
 
-void seedRandom()
-{
-    // Seed our randomizer with the current time
-    std::srand(static_cast<unsigned int>(std::time(nullptr)));
-}
-
 int getRandomInt(int i)
 {
-    return std::rand() % i;
-}
+    std::random_device rd;   // non-deterministic generator  
+    std::mt19937 gen(rd());  // to seed mersenne twister
 
-double getRandomDouble(void)
-{
-    return static_cast<double>(std::rand()) / static_cast<double>(RAND_MAX);
+    return gen() % i;
 }
 
 std::vector<std::string> splitString(std::string inString, char delimiter)

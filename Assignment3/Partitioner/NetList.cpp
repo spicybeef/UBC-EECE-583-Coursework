@@ -1,4 +1,6 @@
 #include <algorithm>
+#include <sstream>
+#include <numeric>
 
 #include "NetList.h"
 #include "Util.h"
@@ -18,7 +20,7 @@ NetList::NetList(parsedInputStruct_t parsedInput)
     initializeGridModel();
     initializeNodes();
     initializeNets();
-    initializeNodeNets();
+    initializeNetSegments();
     initializeNodeNeighbours();
     initializeNetColors();
     initializeCellProperties();
@@ -61,13 +63,11 @@ void NetList::initializeNodes()
 
     mNodes.clear();
 
-    // For each cell
+    // For each node
     for (i = 0; i < mParsedInput.numNodes; i++)
     {
-        // Add a cell
+        // Add an empty node
         mNodes.push_back(nodeStruct_t());
-        // Null the net pointer
-        mNodes.back().nodeNet = nullptr;
         // Initialize node gain to 0
         mNodes.back().gain = 0;
         // Set the node unlocked
@@ -78,7 +78,6 @@ void NetList::initializeNodes()
 void NetList::initializeNets()
 {
     unsigned int i, j;
-    nodeStruct_t *cellPointer;
 
     // Clear any existing nets
     mNets.clear();
@@ -91,9 +90,44 @@ void NetList::initializeNets()
 
         for (j = 0; j < mParsedInput.nets[i].size(); j++)
         {
-            // Give the net its node references
-            cellPointer = &mNodes[mParsedInput.nets[i][j]];
-            mNets.back().connections.push_back(cellPointer);
+            // Give the net its node index
+            mNets.back().nodes.push_back(mParsedInput.nets[i][j]);
+        }
+    }
+}
+
+void NetList::initializeNetSegments()
+{
+    unsigned int i, j, totalSegments;
+
+    // Clear net segments vector
+    mNetSegments.clear();
+
+    totalSegments = 0;
+    // Go through the nets and its connections, and create a node segment for each
+    for (i = 0; i < mNets.size(); i++)
+    {
+        // Push back net segments
+        for (j = 0; j < mNets[i].nodes.size() - 1; j++)
+        {
+            // Push back the segment onto the segment vector
+            mNetSegments.push_back(netSegmentStruct_t());
+
+            // Push back pointers to the nodes on either side of the segment
+            mNetSegments.back().nodes.push_back(mNets[i].nodes[j]);
+            mNetSegments.back().nodes.push_back(mNets[i].nodes[j + 1]);
+
+            // Give the net segment its net id
+            mNetSegments.back().net = i;
+
+            // Push back index onto the net's segment vector
+            mNets[i].segments.push_back(totalSegments);
+
+            // Push back index onto each of the nodes' segment vectors
+            getNodePointer(mNets[i].nodes[j])->segments.push_back(totalSegments);
+            getNodePointer(mNets[i].nodes[j + 1])->segments.push_back(totalSegments);
+
+            totalSegments++;
         }
     }
 }
@@ -106,7 +140,7 @@ void NetList::initializeNodeNeighbours()
     // Go through the nets and its connections, and update all of the nodes' neighbors
     for (i = 0; i < mNets.size(); i++)
     {
-        for (j = 0; j < mNets[i].connections.size() - 1; j++)
+        for (j = 0; j < mNets[i].nodes.size() - 1; j++)
         {
             // Make these nodes neighbors
             // Make sure the connection doesn't already exist
@@ -115,9 +149,9 @@ void NetList::initializeNodeNeighbours()
 
             // First pass for the forward connection...
             found = false;
-            for (k = 0; k < mNets[i].connections[j]->neighbors.size(); k++)
+            for (k = 0; k < getNodePointer(mNets[i].nodes[j])->neighbors.size(); k++)
             {
-                if (mNets[i].connections[j]->neighbors[k] == mNets[i].connections[j + 1])
+                if (getNodePointer(mNets[i].nodes[j])->neighbors[k] == mNets[i].nodes[j + 1])
                 {
                     found = true;
                     break;
@@ -125,7 +159,7 @@ void NetList::initializeNodeNeighbours()
             }
             if (!found)
             {
-                mNets[i].connections[j]->neighbors.push_back(mNets[i].connections[j + 1]);
+                getNodePointer(mNets[i].nodes[j])->neighbors.push_back(mNets[i].nodes[j + 1]);
             }
             else
             {
@@ -134,9 +168,9 @@ void NetList::initializeNodeNeighbours()
 
             // Second pass for the backwards connection...
             found = false;
-            for (k = 0; k < mNets[i].connections[j + 1]->neighbors.size(); k++)
+            for (k = 0; k < getNodePointer(mNets[i].nodes[j + 1])->neighbors.size(); k++)
             {
-                if (mNets[i].connections[j + 1]->neighbors[k] == mNets[i].connections[j])
+                if (getNodePointer(mNets[i].nodes[j + 1])->neighbors[k] == mNets[i].nodes[j])
                 {
                     found = true;
                     break;
@@ -144,26 +178,12 @@ void NetList::initializeNodeNeighbours()
             }
             if (!found)
             {
-                mNets[i].connections[j + 1]->neighbors.push_back(mNets[i].connections[j]);
+                getNodePointer(mNets[i].nodes[j + 1])->neighbors.push_back(mNets[i].nodes[j]);
             }
             else
             {
                 found = false;
             }
-        }
-    }
-}
-
-void NetList::initializeNodeNets()
-{
-    unsigned int i, j;
-
-    // Go through the nets and its connections, and update all of the nodes' nets
-    for (i = 0; i < mNets.size(); i++)
-    {
-        for (j = 0; j < mNets[i].connections.size(); j++)
-        {
-            mNets[i].connections[j]->nodeNet = &mNets[i];
         }
     }
 }
@@ -178,12 +198,14 @@ void NetList::initializeNetColors()
     rgb[1] = 0;
     rgb[2] = 255;
 
-    startingColor = sf::Color(rgb[0], rgb[1], rgb[2], 255);
-
     // When this function has been called, nets should have been randomly placed on the grid
     // Use their current position to give them their starting
     for (i = 0; i < mNets.size(); i++)
     {
+        //rgb[0] = getRandomInt(256);
+        //rgb[1] = getRandomInt(256);
+        //rgb[2] = getRandomInt(256);
+        startingColor = sf::Color(rgb[0], rgb[1], rgb[2], 255);
         // Give the net the starting color
         mNets[i].color = startingColor;
     }
@@ -271,22 +293,22 @@ std::vector<sf::Vertex> NetList::generateNetGeometries()
     std::vector<sf::Vertex> netLines;
     std::vector<sf::Vector2f> netSegment;
     sf::Color color;
-    nodeStruct_t *cellPointer[2];
+    nodeStruct_t *nodePointer[2];
 
     for (i = 0; i < mNets.size(); i++)
     {
-        for (j = 0; j < mNets[i].connections.size() - 1; j++)
+        for (j = 0; j < mNets[i].segments.size(); j++)
         {
             // Clear the temporary net segment vector
             netSegment.clear();
 
-            // Get pointers to the two cells in question
-            cellPointer[0] = mNets[i].connections[j];
-            cellPointer[1] = mNets[i].connections[j + 1];
+            // Get pointers to the two nodes in question
+            nodePointer[0] = getNodePointer(getNetSegmentPointer(mNets[i].segments[j])->nodes[0]);
+            nodePointer[1] = getNodePointer(getNetSegmentPointer(mNets[i].segments[j])->nodes[1]);
 
             // Push back the segment
-            netSegment.push_back(sf::Vector2f(cellPointer[0]->drawPos.x, cellPointer[0]->drawPos.y));
-            netSegment.push_back(sf::Vector2f(cellPointer[1]->drawPos.x, cellPointer[1]->drawPos.y));
+            netSegment.push_back(sf::Vector2f(nodePointer[0]->drawPos.x, nodePointer[0]->drawPos.y));
+            netSegment.push_back(sf::Vector2f(nodePointer[1]->drawPos.x, nodePointer[1]->drawPos.y));
 
             // Check to see if the segment crosses the divider; if so, color it differently
             if (doesSegmentCrossDivider(netSegment))
@@ -308,77 +330,80 @@ std::vector<sf::Vertex> NetList::generateNetGeometries()
 
 std::vector<sf::RectangleShape> NetList::generatePlacedNodeGeometries()
 {
-    std::vector<sf::RectangleShape> placedCells;
+    std::vector<sf::RectangleShape> placedNodes;
     unsigned int i;
 
     for (i = 0; i < mNodes.size(); i++)
     {
-        placedCells.push_back(sf::RectangleShape());
+        placedNodes.push_back(sf::RectangleShape());
 
         if (mCellProperties.maximizedDim == DIM_VERTICAL)
         {
-            placedCells.back().setPosition(
+            placedNodes.back().setPosition(
                 static_cast<float>((mNodes[i].pos.col * mCellProperties.cellSize) + mCellProperties.cellOppositeOffset),
                 static_cast<float>((mNodes[i].pos.row * mCellProperties.cellSize) + mCellProperties.cellOffset)
             );
         }
         else
         {
-            placedCells.back().setPosition(
+            placedNodes.back().setPosition(
                 static_cast<float>((mNodes[i].pos.col * mCellProperties.cellSize) + mCellProperties.cellOffset),
                 static_cast<float>((mNodes[i].pos.row * mCellProperties.cellSize) + mCellProperties.cellOppositeOffset)
             );
         }
-        placedCells.back().setSize(sf::Vector2f(mCellProperties.cellSize * CELL_SHRINK_FACTOR, mCellProperties.cellSize * CELL_SHRINK_FACTOR));
-        placedCells.back().setOrigin(sf::Vector2f(mCellProperties.cellSize * CELL_SHRINK_FACTOR * 0.5f, mCellProperties.cellSize * CELL_SHRINK_FACTOR * 0.5f));
+        placedNodes.back().setSize(sf::Vector2f(mCellProperties.cellSize * CELL_SHRINK_FACTOR, mCellProperties.cellSize * CELL_SHRINK_FACTOR));
+        placedNodes.back().setOrigin(sf::Vector2f(mCellProperties.cellSize * CELL_SHRINK_FACTOR * 0.5f, mCellProperties.cellSize * CELL_SHRINK_FACTOR * 0.5f));
 
         if (mNodes[i].state == NODE_STATE_LOCKED)
         {
-            placedCells.back().setFillColor(sf::Color(244, 86, 66, 255)); // Redish
+            placedNodes.back().setFillColor(sf::Color(244, 86, 66, 255)); // Redish
         }
         else
         {
-            placedCells.back().setFillColor(sf::Color(160, 193, 165, 255)); // Greenish
+            placedNodes.back().setFillColor(sf::Color(160, 193, 165, 255)); // Greenish
         }
     }
 
-    return placedCells;
+    return placedNodes;
 }
 
 std::vector<sf::Text> NetList::generatePlacedNodeText()
 {
-    std::vector<sf::Text> placedCellsText;
+    std::stringstream stringStream;
+    std::vector<sf::Text> placedNodeText;
     unsigned int i;
 
     for (i = 0; i < mNodes.size(); i++)
     {
-        placedCellsText.push_back(sf::Text());
+        stringStream.str(std::string());
+        placedNodeText.push_back(sf::Text());
 
-        placedCellsText.back().setString(std::to_string(mNodes[i].gain));
+        stringStream << i << " [" << std::to_string(mNodes[i].gain) << "]";
+        placedNodeText.back().setString(stringStream.str());
 
         if (mCellProperties.maximizedDim == DIM_VERTICAL)
         {
-            placedCellsText.back().setPosition(
+            placedNodeText.back().setPosition(
                 static_cast<float>((mNodes[i].pos.col * mCellProperties.cellSize) + mCellProperties.cellOppositeOffset),
                 static_cast<float>((mNodes[i].pos.row * mCellProperties.cellSize) + mCellProperties.cellOffset)
             );
         }
         else
         {
-            placedCellsText.back().setPosition(
+            placedNodeText.back().setPosition(
                 static_cast<float>((mNodes[i].pos.col * mCellProperties.cellSize) + mCellProperties.cellOffset),
                 static_cast<float>((mNodes[i].pos.row * mCellProperties.cellSize) + mCellProperties.cellOppositeOffset)
             );
         }
-        placedCellsText.back().setFont(mFont);
-        placedCellsText.back().setCharacterSize(15);
-        placedCellsText.back().setFillColor(sf::Color::Black);
-        placedCellsText.back().setStyle(sf::Text::Regular);
+        placedNodeText.back().setFont(mFont);
+        placedNodeText.back().setCharacterSize(11);
+        placedNodeText.back().setFillColor(sf::Color::Black);
+        placedNodeText.back().setStyle(sf::Text::Regular);
 
-        placedCellsText.back().setOrigin(sf::Vector2f(mCellProperties.cellSize * CELL_SHRINK_FACTOR * 0.5f, mCellProperties.cellSize * CELL_SHRINK_FACTOR * 0.5f));
+        placedNodeText.back().setOrigin(sf::Vector2f(mCellProperties.cellSize * CELL_SHRINK_FACTOR * 0.5f, mCellProperties.cellSize * CELL_SHRINK_FACTOR * 0.5f));
     }
 
-    return placedCellsText;
+    return placedNodeText;
 }
 
 std::vector<sf::Vertex> NetList::generatePartitionerDivider()
@@ -399,12 +424,14 @@ void NetList::randomizeNodePlacement()
 {
     posStruct_t pos;
     unsigned int i, count;
+    std::vector<unsigned int> shuffledIndices(getNumNodes());
 
-    // Shuffle the node list
-    std::random_shuffle(mNodes.begin(), mNodes.end());
+    // Shuffle an index list
+    std::iota(shuffledIndices.begin(), shuffledIndices.end(), 0);
+    std::random_shuffle(shuffledIndices.begin(), shuffledIndices.end());
 
     count = 0;
-    for (i = 0; i < mNodes.size(); i++)
+    for (i = 0; i < shuffledIndices.size(); i++)
     {
         // Put it somewhere randomly on the grid (make sure it's empty)
         // We must distribute them equally across the partition
@@ -434,8 +461,8 @@ void NetList::randomizeNodePlacement()
         // Increment the count
         count++;
 
-        // Update the cell's position
-        updateNodePosition(i, pos);
+        // Update the node's position
+        updateNodePosition(shuffledIndices[i], pos);
     }
 
     // Update all the gains
@@ -453,7 +480,7 @@ void NetList::swapNodePartition(unsigned int id)
         // Our offset is a column
         do
         {
-            if (mNodes[id].pos.col > (mNumCols / 2))
+            if (mNodes[id].pos.col > ((mNumCols / 2) - 1))
             {
                 col = static_cast<unsigned int>(getRandomInt(mNumCols / 2));
 
@@ -473,7 +500,7 @@ void NetList::swapNodePartition(unsigned int id)
         do
         {
             col = static_cast<unsigned int>(getRandomInt(mNumCols));
-            if (mNodes[id].pos.row > (mNumRows / 2))
+            if (mNodes[id].pos.row > ((mNumRows / 2) - 1))
             {
                 row = static_cast<unsigned int>(getRandomInt(mNumRows / 2));
 
@@ -486,7 +513,7 @@ void NetList::swapNodePartition(unsigned int id)
         while (mGrid[col][row] != nullptr);
     }
 
-    // Update the cell's position
+    // Update the node's position
     pos.col = col;
     pos.row = row;
     updateNodePosition(id, pos);
@@ -537,17 +564,17 @@ posStruct_t NetList::getNodePosition(unsigned int id)
 
 void NetList::updateNodePosition(unsigned int id, posStruct_t pos)
 {
-    // Remove the cell from its old position
+    // Remove the node from its old position
     mGrid[mNodes[id].pos.col][mNodes[id].pos.row] = nullptr;
 
-    // Update the cell's grid position
+    // Update the node's grid position
     mNodes[id].pos.col = pos.col;
     mNodes[id].pos.row = pos.row;
 
-    // Update the cell's drawing position
+    // Update the node's drawing position
     mNodes[id].drawPos = getGridCellCoordinate(pos.col, pos.row);
 
-    // Add the cell address to the grid
+    // Add the node address to the grid
     mGrid[pos.col][pos.row] = &mNodes[id];
 }
 
@@ -587,28 +614,30 @@ unsigned int NetList::calculateCurrentCutSize()
 {
     unsigned int i, j, cutSize;
     std::vector<sf::Vector2f> netSegment;
-    nodeStruct_t *cellPointer[2];
+    nodeStruct_t *nodePointer[2];
 
     cutSize = 0;
     for (i = 0; i < mNets.size(); i++)
     {
-        for (j = 0; j < mNets[i].connections.size() - 1; j++)
+        for (j = 0; j < mNets[i].segments.size(); j++)
         {
             // Clear the temporary net segment vector
             netSegment.clear();
 
-            // Get pointers to the two cells in question
-            cellPointer[0] = mNets[i].connections[j];
-            cellPointer[1] = mNets[i].connections[j + 1];
+            // Get pointers to the two nodes in question
+            nodePointer[0] = getNodePointer(getNetSegmentPointer(mNets[i].segments[j])->nodes[0]);
+            nodePointer[1] = getNodePointer(getNetSegmentPointer(mNets[i].segments[j])->nodes[1]);
 
             // Push back the segment
-            netSegment.push_back(sf::Vector2f(cellPointer[0]->drawPos.x, cellPointer[0]->drawPos.y));
-            netSegment.push_back(sf::Vector2f(cellPointer[1]->drawPos.x, cellPointer[1]->drawPos.y));
+            netSegment.push_back(sf::Vector2f(nodePointer[0]->drawPos.x, nodePointer[0]->drawPos.y));
+            netSegment.push_back(sf::Vector2f(nodePointer[1]->drawPos.x, nodePointer[1]->drawPos.y));
 
             // Check to see if the segment crosses the divider; if so, count it
             if (doesSegmentCrossDivider(netSegment))
             {
                 cutSize++;
+                // We only count one crossing, any others don't matter
+                break;
             }
         }
     }
@@ -635,27 +664,54 @@ int NetList::calculateTotalGain()
 int NetList::calculateNodeGain(unsigned int id)
 {
     std::vector<sf::Vector2f> netSegment;
-    nodeStruct_t * neighborPointer;
-    unsigned int i;
+    std::vector<unsigned int> crossingNets;
+    unsigned int i, j, neighborNodeId, segmentNet;
+    nodeStruct_t *nodePointer[2];
     int currentGain = 0;
 
-    // 
-    // Origin of the segment is the node we are on
-    netSegment.push_back(sf::Vector2f(mNodes[id].drawPos.x, mNodes[id].drawPos.y));
-    // Push back the other end with a dummy
-    netSegment.push_back(sf::Vector2f());
-    // Go through each neighbour and check if we cross the boundary
-    for (i = 0; i < mNodes[id].neighbors.size(); i++)
+    // The same net crossing the partition must not be counted twice
+    // For the given node, go through its net segments
+    for (i = 0; i < getNodePointer(id)->segments.size(); i++)
     {
-        neighborPointer = mNodes[id].neighbors[i];
-        netSegment[1] = sf::Vector2f(neighborPointer->drawPos.x, neighborPointer->drawPos.y);
+        // Record the segment's net
+        segmentNet = getNetSegmentPointer(getNodePointer(id)->segments[i])->net;
 
+        // Get the neighbor's node ID through the segment (one of them should be this one)
+        j = 0;
+        do
+        {
+            neighborNodeId = getNetSegmentPointer(getNodePointer(id)->segments[i])->nodes[j++];
+        }
+        while (neighborNodeId != id);
+
+        // Clear the temporary net segment vector
+        netSegment.clear();
+
+        // Get pointers to the two nodes in question
+        nodePointer[0] = getNodePointer(id);
+        nodePointer[1] = getNodePointer(neighborNodeId);
+
+        // Push back the segment
+        netSegment.push_back(sf::Vector2f(nodePointer[0]->drawPos.x, nodePointer[0]->drawPos.y));
+        netSegment.push_back(sf::Vector2f(nodePointer[1]->drawPos.x, nodePointer[1]->drawPos.y));
+
+        // Check to see if the segment crosses the divider
         if (doesSegmentCrossDivider(netSegment))
         {
-            currentGain++;
+            // Net is crossing!
+            // Linearly search through crossing nets to see if we've encountered it before
+            if (std::find(crossingNets.begin(), crossingNets.end(), segmentNet) == crossingNets.end())
+            {
+                // The net hasn't been seen crossing yet
+                crossingNets.push_back(segmentNet);
+                // This net increments our gain, but no further occurence of it will increase it
+                currentGain++;
+            }
+            // Net was already seen crossing, so it doesn't count towards the gain
         }
         else
         {
+            // Net does not cross partition, it reduces the gain
             currentGain--;
         }
     }
@@ -751,6 +807,16 @@ std::vector<sf::Vector2f> NetList::getDividerVector()
 nodeStruct_t * NetList::getNodePointer(unsigned int id)
 {
     return &mNodes[id];
+}
+
+netStruct_t * NetList::getNetPointer(unsigned int id)
+{
+    return &mNets[id];
+}
+
+netSegmentStruct_t * NetList::getNetSegmentPointer(unsigned int id)
+{
+    return &mNetSegments[id];
 }
 
 void NetList::updateNetColor(unsigned int id)

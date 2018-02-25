@@ -21,8 +21,8 @@ private:
     void initializeGridModel();
     void initializeNodes();
     void initializeNets();
+    void initializeNetSegments();
     void initializeNodeNeighbours();
-    void initializeNodeNets();
     void initializeNetColors();
     void initializeCellProperties();
 
@@ -58,18 +58,21 @@ private:
     bool doesSegmentCrossDivider(std::vector<sf::Vector2f> segment);
     std::vector<sf::Vector2f> getDividerVector();
     nodeStruct_t * getNodePointer(unsigned int id);
+    netStruct_t * getNetPointer(unsigned int id);
+    netSegmentStruct_t * getNetSegmentPointer(unsigned int id);
     void updateNetColor(unsigned int id);
     drawPosStruct_t getGridCellCoordinate(unsigned int col, unsigned int row);
 
     //** Class Member Variables
 private:
-    gridVec mGrid;                          ///< Grid containing pointers to nodes
-    unsigned int mNumCols;                  ///< Number of grid columns
-    unsigned int mNumRows;                  ///< Number of grid rows
-    std::vector<nodeStruct_t> mNodes;       ///< Nodes
-    std::vector<netStruct_t> mNets;         ///< Nets
-    cellPropertiesStruct_t mCellProperties; ///< Grid cell properties
-    parsedInputStruct_t mParsedInput;       ///< Struct containing the parsed input from the file
+    gridVec mGrid;                                  ///< Grid containing pointers to nodes
+    unsigned int mNumCols;                          ///< Number of grid columns
+    unsigned int mNumRows;                          ///< Number of grid rows
+    std::vector<nodeStruct_t> mNodes;               ///< Nodes
+    std::vector<netStruct_t> mNets;                 ///< Nets
+    std::vector<netSegmentStruct_t> mNetSegments;   ///< Net segments
+    cellPropertiesStruct_t mCellProperties;         ///< Grid cell properties
+    parsedInputStruct_t mParsedInput;               ///< Struct containing the parsed input from the file
 
     sf::Font mFont;                         ///< Store a copy of the font we'll be using
 };

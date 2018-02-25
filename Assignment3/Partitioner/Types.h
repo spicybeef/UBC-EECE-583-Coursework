@@ -61,24 +61,33 @@ typedef struct
     float                                       y;                      ///< Y coordinate
 } drawPosStruct_t;
 
+// Net segment struct
+typedef struct
+{
+    unsigned int                                net;                    ///< Net segment's net id
+    std::vector<unsigned int>                   nodes;                  ///< Nodes on either side of the segment
+} netSegmentStruct_t;
+
 // Net struct
 typedef struct Net
 {
-    std::vector<nodeStruct_t*>                  connections;            ///< Pointers to the cell's connections
+    unsigned int                                id;                     ///< Net's id
+    std::vector<unsigned int>                   nodes;                  ///< Pointers to the net's nodes
+    std::vector<unsigned int>                   segments;               ///< Individual segments of the net
     sf::Color                                   color;                  ///< Net color
 } netStruct_t;
 
-// Cell struct
+// Node struct
 typedef struct Node
 {
-    posStruct_t                                 pos;                    ///< Current position of the cell
-    drawPosStruct_t                             drawPos;                ///< Current drawing position of the cell's center
+    posStruct_t                                 pos;                    ///< Current position of the node
+    drawPosStruct_t                             drawPos;                ///< Current drawing position of the node's center
 
     nodeState_e                                 state;                  ///< Current node state
     int                                         gain;                   ///< Current node gain
 
-    netStruct_t                                 *nodeNet;               ///< A pointer to the cell's net, for easy reference
-    std::vector<nodeStruct_t*>                  neighbors;             ///< Pointers to the cell's neighbors
+    std::vector<unsigned int>                   neighbors;              ///< Pointers to the node's neighbors
+    std::vector<unsigned int>                   segments;               ///< Segment indices to the node's connected segments
 } nodeStruct_t;
 
 // Typedefs for grid

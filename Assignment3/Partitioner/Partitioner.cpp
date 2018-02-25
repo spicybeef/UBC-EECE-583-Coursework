@@ -85,6 +85,7 @@ void Partitioner::doPartitioning(NetList &netList)
             mStartTime = clock();
             // Place the nodes at random
             netList.randomizeNodePlacement();
+            mCurrentPartition = 0;
             // Record the partition where each node is in
             for (i = 0; i < netList.getNumNodes(); i++)
             {
@@ -99,16 +100,16 @@ void Partitioner::doPartitioning(NetList &netList)
         case STATE_PARTITIONING_START:
             // Unlock all nodes
             netList.unlockAllNodes();
+            // Calculate the current cut size
+            mCurrentCutSize = netList.calculateCurrentCutSize();
             // Make best cut size negative (indicates we haven't gotten one yet)
             mBestCutSize = -1;
             mState = STATE_PARTITIONING_FIND_SWAP_CANDIDATES;
             break;
 
         case STATE_PARTITIONING_FIND_SWAP_CANDIDATES:
-
             // Calculate total gain
             mCurrentGain = netList.calculateTotalGain();
-
             // Calculate the current cut size
             mCurrentCutSize = netList.calculateCurrentCutSize();
             // Check if this is better than our current cut size
@@ -127,10 +128,10 @@ void Partitioner::doPartitioning(NetList &netList)
 
             // Determine which partition we are swapping from
             // If size of 0 is greater than 1, then swap from 0
-            if (mPartitionNodeList[0].size() > mPartitionNodeList[1].size())
-            {
-                mCurrentPartition = 0;
-            }
+            //if (mPartitionNodeList[0].size() > mPartitionNodeList[1].size())
+            //{
+            //    mCurrentPartition++
+            //}
             // If we're equal, pick a random one to swap from
             // This has the issue of possibly getting an uneven amount of locks, disabled for now
             //else if(mPartitionNodeList[0].size() == mPartitionNodeList[1].size())
@@ -138,10 +139,13 @@ void Partitioner::doPartitioning(NetList &netList)
             //    currentPartition = getRandomInt(1);
             //}
             // Else size of 1 is greater than 0, swap from 1
-            else
-            {
-                mCurrentPartition = 1;
-            }
+            //else
+            //{
+            //    mCurrentPartition = 1;
+            //}
+
+            mCurrentPartition++;
+            mCurrentPartition &= 1;
 
             // Go through the node list and find a list of swap candidates (those with the highest gain)
             currentMaxGain = -999;
@@ -226,10 +230,19 @@ void Partitioner::doPartitioning(NetList &netList)
             {
                 mPartitionNodeList[0].push_back(candidateNodeId);
             }
+            // Calculate the current cut size
+            mCurrentCutSize = netList.calculateCurrentCutSize();
             // Find some more candidates
             mState = STATE_PARTITIONING_FIND_SWAP_CANDIDATES;
             break;
         case STATE_FINISHED:
+            // Reset board to best cut
+            for (i = 0; i < netList.getNumNodes(); i++)
+            {
+                netList.updateNodePosition(i, mBestNodePositions[i]);
+            }
+            // Calculate the current cut size
+            mCurrentCutSize = netList.calculateCurrentCutSize();
             break;
         default:
             break;

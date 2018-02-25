@@ -39,9 +39,6 @@ int main(int argc, char **argv)
     // Partitioner object
     Partitioner *partitioner;
 
-    // Seed the random number generator
-    seedRandom();
-
     // Background
     sf::RectangleShape background(sf::Vector2f(WIN_GRAPHICPORT_WIDTH, WIN_GRAPHICPORT_HEIGHT));
     background.setPosition(sf::Vector2f(0.f, 0.f));
@@ -72,7 +69,8 @@ int main(int argc, char **argv)
     // If no argument is given, load up a default input file
     if (!argv[1])
     {
-        partitioner->mFilename = const_cast<char *>("..\\benchmarks\\cm162a.txt");
+        //partitioner->mFilename = const_cast<char *>("..\\benchmarks\\test.txt");
+        partitioner->mFilename = const_cast<char *>("..\\benchmarks\\cm138a.txt");
         //partitioner->mFilename = const_cast<char *>("..\\benchmarks\\apex4.txt");
     }
     else
@@ -102,15 +100,8 @@ int main(int argc, char **argv)
     window.setView(calcView(window.getSize(), viewportSize));
 
     // Do partitioning and output results
-    swapCount = 0;
     while(window.isOpen())
-    { 
-        // Run the partitioning for the number of nodes we have
-        for(i = 0; i < netList->getNumNodes()*0.1; i++)
-        {
-            partitioner->doPartitioning(*netList);
-        }
-        
+    {   
         sf::Event event;
         while(window.pollEvent(event))
         {
@@ -157,6 +148,12 @@ int main(int argc, char **argv)
 
         // Display window
         window.display();
+
+        // Run the partitioning for the number of nodes we have
+        for (i = 0; i < netList->getNumNodes()*0.1; i++)
+        {
+            partitioner->doPartitioning(*netList);
+        }
     }
 
     return 0;
