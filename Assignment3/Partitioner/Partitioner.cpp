@@ -74,7 +74,7 @@ parsedInputStruct_t Partitioner::getParsedInput()
 
 void Partitioner::doPartitioning(NetList &netList)
 {
-    unsigned int i, lockCount, candidateIndex, candidateSwapIndex, candidateNodeId;
+    unsigned int i, j, lockCount, candidateIndex, candidateSwapIndex, candidateNodeId, initialBestCutSize;
     int currentMaxGain, candidateGain;
 
     switch (mState)
@@ -87,7 +87,27 @@ void Partitioner::doPartitioning(NetList &netList)
             mStartTime = clock();
             
             // Place the nodes at random
-            netList.randomizeNodePlacement();
+            // Do this some number of times to get the smallest amount of initial cut size
+            initialBestCutSize = 0xDEADBEEF;
+            for (i = 0; i < 50; i++)
+            {
+                netList.randomizeNodePlacement();
+                mStartCutSize = netList.calculateCurrentCutSize();
+                if (mStartCutSize < initialBestCutSize)
+                {
+                    // Take note of the current node positions for this best cut size
+                    mBestNodePositions.clear();
+                    for (j = 0; j < netList.getNumNodes(); j++)
+                    {
+                        mBestNodePositions.push_back(netList.getNodePosition(j));
+                    }
+                }
+            }
+            // Pick the smallest cut size from the initial random placement
+            for (i = 0; i < netList.getNumNodes(); i++)
+            {
+                netList.updateNodePosition(i, mBestNodePositions[i]);
+            }
 
             // Calculate the starting cut size
             mStartCutSize = netList.calculateCurrentCutSize();
