@@ -9,7 +9,15 @@ typedef std::vector<std::vector<unsigned int>>  netVec;
 typedef struct Net netStruct_t;
 typedef struct Node nodeStruct_t;
 
-// partitioning states enum
+// Run mode enum
+typedef enum
+{
+    EVERY_TICK = 0,
+    EVERY_NODE_PERCENT,
+    EVERY_PERIOD,
+} runMode_e;
+
+// Partitioning states enum
 typedef enum
 {
     STATE_INIT = 0,

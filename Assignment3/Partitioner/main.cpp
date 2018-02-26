@@ -19,8 +19,14 @@
 
 int main(int argc, char **argv)
 {
-    unsigned int i, swapCount;
+    unsigned int i;
     parsedInputStruct_t input;
+    clock_t lastTime;
+    //const runMode_e runMode = EVERY_TICK;
+    const runMode_e runMode = EVERY_NODE_PERCENT;
+    //const runMode_e runMode = EVERY_PERIOD;
+
+    const clock_t PARTITIONER_DELAY_PERIOD_MS = 1000;
 
     // Viewport size
     const sf::Vector2u viewportSize(
@@ -70,7 +76,8 @@ int main(int argc, char **argv)
     if (!argv[1])
     {
         //partitioner->mFilename = const_cast<char *>("..\\benchmarks\\test.txt");
-        partitioner->mFilename = const_cast<char *>("..\\benchmarks\\cm138a.txt");
+        //partitioner->mFilename = const_cast<char *>("..\\benchmarks\\cm138a.txt");
+        partitioner->mFilename = const_cast<char *>("..\\benchmarks\\cm151a.txt");
         //partitioner->mFilename = const_cast<char *>("..\\benchmarks\\apex4.txt");
     }
     else
@@ -99,6 +106,8 @@ int main(int argc, char **argv)
         "Partitioner", sf::Style::Titlebar | sf::Style::Close | sf::Style::Resize);
     window.setView(calcView(window.getSize(), viewportSize));
 
+    lastTime = clock();
+
     // Do partitioning and output results
     while(window.isOpen())
     {   
@@ -122,20 +131,25 @@ int main(int argc, char **argv)
 
         // Clear window
         window.clear();
+
         // Draw background
         window.draw(background);
+
         // Draw infoport
         text.setString(partitioner->getInfoportString());
         window.draw(text);
+
         // Draw separator
         window.draw(line, 2, sf::Lines);
+
         // Draw grid
         for(i = 0; i < backgroundGrid.size(); i++)
         {
             window.draw(backgroundGrid[i]);
         }
-        // Draw divider
-        window.draw(&dividerLine.front(), dividerLine.size(), sf::Lines);
+
+        // Draw net lines
+        window.draw(&netLines.front(), netLines.size(), sf::Lines);
 
         // Draw placed cells and their text
         for (i = 0; i < placedCells.size(); i++)
@@ -143,16 +157,34 @@ int main(int argc, char **argv)
             window.draw(placedCells[i]);
             window.draw(placedCellsText[i]);
         }
-        // Draw net lines
-        window.draw(&netLines.front(), netLines.size(), sf::Lines);
+
+        // Draw divider
+        window.draw(&dividerLine.front(), dividerLine.size(), sf::Lines);
 
         // Display window
         window.display();
 
-        // Run the partitioning for the number of nodes we have
-        for (i = 0; i < netList->getNumNodes()*0.1; i++)
+        // Run the partitioning for a percentage of the nodes that we have (tradeoff between screen update and partitioner working)
+        switch (runMode)
         {
-            partitioner->doPartitioning(*netList);
+            // Partitioner runs every graphic update
+            case EVERY_TICK:
+                partitioner->doPartitioning(*netList);
+                break;
+            // Partitioner runs for a percentage of the total nodes
+            case EVERY_NODE_PERCENT:
+                for (i = 0; i < netList->getNumNodes()*0.2; i++)
+                {
+                    partitioner->doPartitioning(*netList);
+                }
+                break;
+            // Partioner for a period of some seconds
+            case EVERY_PERIOD:
+                if (clock() - lastTime > PARTITIONER_DELAY_PERIOD_MS)
+                {
+                    partitioner->doPartitioning(*netList);
+                    lastTime = clock();
+                }
         }
     }
 

@@ -13,12 +13,15 @@ public:
     parsedInputStruct_t getParsedInput();
     void doPartitioning(NetList &netList);
     std::string getInfoportString();
+    void updatePartitionLists(NetList &netList);
+    void determineSwap();
 
     std::string mFilename;                              ///< Current filename
     parsedInputStruct_t mParsedInput;                   ///< Parsed input struct
     clock_t mStartTime;                                 ///< start time for partitioning
     clock_t mEndTime;                                   ///< end time for partitioning
     state_e mState;                                     ///< Current partitioning state
+    bool mFirstTime;                                    ///< To check if this is the first time
     int mCurrentGain;                                   ///< Keep track of the current gain
     unsigned int mCurrentPartition;                     ///< Keep track of current partition we are swapping from
     unsigned int mStartCutSize;                         ///< Keep track of the starting cut size

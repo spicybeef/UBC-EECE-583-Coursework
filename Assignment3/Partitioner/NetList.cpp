@@ -1,5 +1,7 @@
 #include <algorithm>
 #include <sstream>
+#include <iostream>
+#include <iomanip>
 #include <numeric>
 
 #include "NetList.h"
@@ -396,7 +398,7 @@ std::vector<sf::Text> NetList::generatePlacedNodeText()
             );
         }
         placedNodeText.back().setFont(mFont);
-        placedNodeText.back().setCharacterSize(11);
+        placedNodeText.back().setCharacterSize(9);
         placedNodeText.back().setFillColor(sf::Color::Black);
         placedNodeText.back().setStyle(sf::Text::Regular);
 
@@ -410,7 +412,7 @@ std::vector<sf::Vertex> NetList::generatePartitionerDivider()
 {
     std::vector<sf::Vertex> partitionerDivider;
     std::vector<sf::Vector2f> dividerVector;
-    sf::Color color(255, 0, 0, 255); // red
+    sf::Color color(0, 255, 0, 255); // green
 
     dividerVector = getDividerVector();
 
@@ -643,22 +645,6 @@ unsigned int NetList::calculateCurrentCutSize()
     }
 
     return cutSize;
-}
-
-int NetList::calculateTotalGain()
-{
-    unsigned int i;
-    int totalGain;
-
-    updateAllNodeGains();
-
-    totalGain = 0;
-    for (i = 0; i < mNodes.size(); i++)
-    {
-        totalGain += mNodes[i].gain;
-    }
-
-    return totalGain;
 }
 
 int NetList::calculateNodeGain(unsigned int id)

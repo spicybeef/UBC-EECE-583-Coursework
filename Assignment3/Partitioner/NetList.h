@@ -47,7 +47,6 @@ public:
     void unlockAllNodes();
     bool isNodeLocked(unsigned int id);
     unsigned int calculateCurrentCutSize();
-    int calculateTotalGain();
     int calculateNodeGain(unsigned int id);
     int getNodeGain(unsigned int id);
     void updateAllNodeGains();
