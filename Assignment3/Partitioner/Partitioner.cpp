@@ -43,9 +43,9 @@ bool Partitioner::parseInputFile()
     mParsedInput.numRows = stoi(stringVec[2]);
     mParsedInput.numCols = stoi(stringVec[3]);
 
-    std::cout << "Grid size is " << mParsedInput.numRows << " rows x " << mParsedInput.numCols << " cols" << std::endl;
-    std::cout << "Number of nodes is " << mParsedInput.numNodes << std::endl;
-    std::cout << "Number of connections is " << mParsedInput.numConnections << std::endl;
+    //std::cout << "Grid size is " << mParsedInput.numRows << " rows x " << mParsedInput.numCols << " cols" << std::endl;
+    //std::cout << "Number of nodes is " << mParsedInput.numNodes << std::endl;
+    //std::cout << "Number of connections is " << mParsedInput.numConnections << std::endl;
 
     // 2. Get all connections
     for (i = 0; i < mParsedInput.numConnections; i++)
@@ -266,11 +266,6 @@ std::string Partitioner::getInfoportString()
     stringStream << "Start Cut:   " << std::setw(12) << mStartCutSize << "   ";
     stringStream << "Best Cut:    " << std::setw(12) << mBestCutSize << "   ";
     stringStream << "Current Cut: " << std::setw(12) << mCurrentCutSize << "   ";
-    //stringStream << "Improvement: " << std::setw(11) << 100.0 * static_cast<double>(difference) / static_cast<double>(partitionerStruct->startingHalfPerimSum) << "%   " << std::endl;
-    //stringStream << "Start Temp:  " << std::setw(12) << partitionerStruct->startTemperature << "   ";
-    //stringStream << "Decrements:  " << std::setw(12) << partitionerStruct->totalTempDecrements << "   ";
-    //stringStream << "Swap:       " << std::setw(6) << partitionerStruct->currentMove << "/" << std::setw(6) << partitionerStruct->movesPerTempDec << "   ";
-    //stringStream << "Acceptance:  " << std::setw(11) << 100.0 * calculateAcceptanceRate(partitionerStruct->acceptanceTracker) << "%   ";
     stringStream << std::endl << std::endl;
     stringStream << "State:       ";
     switch (mState)
@@ -279,16 +274,16 @@ std::string Partitioner::getInfoportString()
             stringStream << "Starting partitioning!";
             break;
         case STATE_PARTITIONING_START:
-            stringStream << "Start partitioning...        Elapsed time: " << std::setw(10) << (clock() - mStartTime) / 1000 << "s" << std::endl;
+            stringStream << "Start partitioning...        Elapsed time: " << std::setw(10) << clock() - mStartTime << " ms" << std::endl;
             break;
         case STATE_PARTITIONING_FIND_SWAP_CANDIDATES:
-            stringStream << "Finding swap candidates...   Elapsed time: " << std::setw(10) << (clock() - mStartTime) / 1000 << "s" << std::endl;
+            stringStream << "Finding swap candidates...   Elapsed time: " << std::setw(10) << clock() - mStartTime << " ms" << std::endl;
             break;
         case STATE_PARTITIONING_SWAP_AND_LOCK:
-            stringStream << "Swap and locking...          Elapsed time: " << std::setw(10) << (clock() - mStartTime) / 1000 << "s" << std::endl;
+            stringStream << "Swap and locking...          Elapsed time: " << std::setw(10) << clock() - mStartTime << " ms" << std::endl;
             break;
         case STATE_FINISHED:
-            stringStream << "* Finished! *  Elapsed time: " << std::setw(10) << (mEndTime - mStartTime) / 1000 << " s    with final cut size of: " << mCurrentCutSize << std::endl;
+            stringStream << "* Finished! *  Elapsed time: " << std::setw(10) << mEndTime - mStartTime << " ms    with final cut size of: " << mCurrentCutSize << std::endl;
             break;
         default:
             break;

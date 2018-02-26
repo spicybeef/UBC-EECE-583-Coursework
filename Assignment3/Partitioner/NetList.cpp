@@ -30,6 +30,12 @@ NetList::NetList(parsedInputStruct_t parsedInput)
     // Create the font
     //mFont.loadFromFile("consola.ttf");
     mFont.loadFromFile("C:\\Windows\\Fonts\\consola.ttf");
+
+    // Output some information
+    std::cout << "Construction of NetList complete! Summary:" << std::endl;
+    std::cout << "Nodes: " << mNodes.size() << std::endl;
+    std::cout << "Nets: " << mNets.size() << std::endl;
+    std::cout << "Net Segments: " << mNetSegments.size() << std::endl;
 }
 
 NetList::~NetList()
