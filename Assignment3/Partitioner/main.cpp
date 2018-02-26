@@ -19,13 +19,13 @@
 
 int main(int argc, char **argv)
 {
-    unsigned int i;
+    unsigned int i, roundNum, totalRounds, bestCut;
     parsedInputStruct_t input;
     clock_t lastTime;
     //const runMode_e runMode = EVERY_TICK;
     const runMode_e runMode = EVERY_NODE_PERCENT;
     //const runMode_e runMode = EVERY_PERIOD;
-
+    const unsigned int NUMBER_OF_ROUNDS = 1;
     const clock_t PARTITIONER_DELAY_PERIOD_MS = 1000;
 
     // Viewport size
@@ -85,6 +85,19 @@ int main(int argc, char **argv)
         partitioner->mFilename = argv[1];
     }
 
+    // Round number is after filename, the third argument
+    if (!argv[2])
+    {
+        // Use default
+        totalRounds = NUMBER_OF_ROUNDS;
+    }
+    else
+    {
+        totalRounds = static_cast<unsigned int>(std::stoi(argv[2]));
+    }
+
+    std::cout << "Will run for " << totalRounds << " rounds." << std::endl;
+
     // Parse the input file
     if (!partitioner->parseInputFile())
     {
@@ -107,7 +120,8 @@ int main(int argc, char **argv)
     window.setView(calcView(window.getSize(), viewportSize));
 
     lastTime = clock();
-
+    roundNum = 0;
+    bestCut = 0xDEADBEEF;
     // Do partitioning and output results
     while(window.isOpen())
     {   
@@ -185,6 +199,31 @@ int main(int argc, char **argv)
                     partitioner->doPartitioning(*netList);
                     lastTime = clock();
                 }
+            default:
+                // Should never be here, do nothing
+                break;
+        }
+
+        // Check if partitioner is done (only do this for totalRounds > 1)
+        if (totalRounds > 1 && partitioner->getState() == STATE_FINISHED)
+        {
+            // We're done a round
+            roundNum++;
+            // See if we did better than previously
+            if (bestCut > partitioner->mCurrentCutSize)
+            {
+                bestCut = partitioner->mCurrentCutSize;
+            }
+            // Output result
+            std::cout << "Round " << roundNum << " finished. Got " << partitioner->mCurrentCutSize << " cuts in " << partitioner->mEndTime - partitioner->mStartTime << " ms" << std::endl;
+            // Re-start
+            partitioner->setState(STATE_INIT);
+            if (roundNum >= totalRounds)
+            {
+                // We're done for good.
+                std::cout << "Done for good! After " << roundNum << " rounds, best cut was: " << bestCut << std::endl;
+                return 0;
+            }
         }
     }
 

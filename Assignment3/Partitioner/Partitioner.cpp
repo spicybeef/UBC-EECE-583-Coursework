@@ -2,6 +2,7 @@
 #include <iomanip>
 #include <fstream>
 #include <sstream>
+#include <string>
 #include <vector>
 
 #include "Partitioner.h"
@@ -320,4 +321,14 @@ void Partitioner::determineSwap()
     {
         mCurrentPartition = 1;
     }
+}
+
+state_e Partitioner::getState()
+{
+    return mState;
+}
+
+void Partitioner::setState(state_e state)
+{
+    mState = state;
 }

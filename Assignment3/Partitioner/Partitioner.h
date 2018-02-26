@@ -15,6 +15,8 @@ public:
     std::string getInfoportString();
     void updatePartitionLists(NetList &netList);
     void determineSwap();
+    state_e getState();
+    void setState(state_e state);
 
     std::string mFilename;                              ///< Current filename
     parsedInputStruct_t mParsedInput;                   ///< Parsed input struct
