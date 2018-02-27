@@ -9,6 +9,8 @@
 #include "Types.h"
 #include "Constants.h"
 
+#define GAINMOD 1
+
 NetList::NetList(parsedInputStruct_t parsedInput)
 {
     // Copy into the object the file's parsed input
@@ -662,6 +664,7 @@ int NetList::calculateNodeGain(unsigned int id)
     int currentGain = 0;
     std::vector<unsigned int> netNodePartitions[2];
 
+#if GAIN_MOD
     // Record the node's current partition
     nodePartition = getNodePartition(id);
     // Get the other partition
@@ -700,6 +703,7 @@ int NetList::calculateNodeGain(unsigned int id)
             currentGain -= 2 * (static_cast<int>(netNodePartitions[nodePartition].size()) - static_cast<int>(netNodePartitions[otherPartition].size()));
         }
     }
+#endif //GAINMOD
 
     // The same net crossing the partition must not be counted twice
     // For the given node, go through its net segments
