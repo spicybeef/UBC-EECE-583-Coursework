@@ -73,27 +73,27 @@ int main(int argc, char **argv)
 
     // Filename to read in is the second argument
     // If no argument is given, load up a default input file
-    if (!argv[1])
+    if (argc > 1)
+    {
+        partitioner->mFilename = argv[1];
+    }
+    else
     {
         //partitioner->mFilename = const_cast<char *>("..\\benchmarks\\test.txt");
         //partitioner->mFilename = const_cast<char *>("..\\benchmarks\\cm138a.txt");
         partitioner->mFilename = const_cast<char *>("..\\benchmarks\\cm151a.txt");
         //partitioner->mFilename = const_cast<char *>("..\\benchmarks\\apex4.txt");
     }
-    else
-    {
-        partitioner->mFilename = argv[1];
-    }
 
     // Round number is after filename, the third argument
-    if (!argv[2])
+    if (argc > 2)
+    {
+        totalRounds = static_cast<unsigned int>(std::stoi(argv[2]));
+    }
+    else
     {
         // Use default
         totalRounds = NUMBER_OF_ROUNDS;
-    }
-    else
-    {
-        totalRounds = static_cast<unsigned int>(std::stoi(argv[2]));
     }
 
     std::cout << "Will run for " << totalRounds << " rounds." << std::endl;

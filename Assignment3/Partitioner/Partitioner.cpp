@@ -173,7 +173,7 @@ void Partitioner::doPartitioning(NetList &netList)
             }
 
             // Go through the node list and find a list of swap candidates (those with the highest gain)
-            currentMaxGain = -999;
+            currentMaxGain = -999999;
             // Keep track of how many are locked
             lockCount = 0;
             for (i = 0; i < mPartitionNodeList[mCurrentPartition].size(); i++)
