@@ -657,9 +657,49 @@ int NetList::calculateNodeGain(unsigned int id)
 {
     std::vector<sf::Vector2f> netSegment;
     std::vector<unsigned int> crossingNets;
-    unsigned int i, j, neighborNodeId, segmentNet;
+    unsigned int i, j, neighborNodeId, segmentNet, nodePartition, otherPartition;
     nodeStruct_t *nodePointer[2];
     int currentGain = 0;
+    std::vector<unsigned int> netNodePartitions[2];
+
+    // Record the node's current partition
+    nodePartition = getNodePartition(id);
+    // Get the other partition
+    if (nodePartition == 0)
+    {
+        otherPartition = 1;
+    }
+    else
+    {
+        otherPartition = 0;
+    }
+    netNodePartitions[nodePartition].push_back(id);
+    // Determine which partition each of the node's neighbors belongs to
+    // This is to try to encourage connected nets to go to the partition with the most of its friends
+    for (i = 0; i < getNodePointer(id)->neighbors.size(); i++)
+    {
+        netNodePartitions[getNodePartition(getNodePointer(id)->neighbors[i])].push_back(getNodePointer(id)->neighbors[i]);
+    }
+    // Check if we have an imbalance
+    if (netNodePartitions[nodePartition].size() == 0 || netNodePartitions[otherPartition].size() == 0)
+    {
+        // Nope, all of our nodes are on one side, this is good so discourage a swap by giving the node a very low gain
+        currentGain = -999;
+    }
+    // There's room for improvement by swapping it (or leaving it where it is)
+    else
+    {
+        // If our friends are mostly in the other partition, encourage a swap by giving it a large gain based on the difference
+        if (netNodePartitions[nodePartition].size() < netNodePartitions[otherPartition].size())
+        {
+            currentGain += 2 * (static_cast<int>(netNodePartitions[otherPartition].size()) - static_cast<int>(netNodePartitions[nodePartition].size()));
+        }
+        // Otherwise discourage it
+        else
+        {
+            currentGain -= 2 * (static_cast<int>(netNodePartitions[nodePartition].size()) - static_cast<int>(netNodePartitions[otherPartition].size()));
+        }
+    }
 
     // The same net crossing the partition must not be counted twice
     // For the given node, go through its net segments
