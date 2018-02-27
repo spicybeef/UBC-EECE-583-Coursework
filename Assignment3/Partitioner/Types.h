@@ -9,13 +9,20 @@ typedef std::vector<std::vector<unsigned int>>  netVec;
 typedef struct Net netStruct_t;
 typedef struct Node nodeStruct_t;
 
-// Run mode enum
+// Program mode
 typedef enum
 {
-    EVERY_TICK = 0,
-    EVERY_NODE_PERCENT,
-    EVERY_PERIOD,
-} runMode_e;
+    PROGRAM_MODE_CLI = 0,
+    PROGRAM_MODE_GUI
+} programMode_e;
+
+// Draw update mode enum
+typedef enum
+{
+    DRAW_EVERY_TICK = 0,
+    DRAW_EVERY_NODE_PERCENT,
+    DRAW_EVERY_PERIOD,
+} drawUpdateMode_e;
 
 // Partitioning states enum
 typedef enum
