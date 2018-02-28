@@ -1,0 +1,322 @@
+
+Q:\Repos\UBC-EECE-583-Coursework\Assignment3\Partitioner>Partitioner.exe ..\benchmarks\cm151a.txt 20 0
+Will run for 20 rounds.
+File ..\benchmarks\cm151a.txt opened! Here's what's in it:
+Construction of NetList complete! Summary:
+Nodes: 22
+Nets: 20
+Net Segments: 30
+Round 1 finished. Got 7 cuts in 44 ms
+Round 2 finished. Got 9 cuts in 48 ms
+Round 3 finished. Got 7 cuts in 47 ms
+Round 4 finished. Got 7 cuts in 44 ms
+Round 5 finished. Got 7 cuts in 43 ms
+Round 6 finished. Got 11 cuts in 43 ms
+Round 7 finished. Got 9 cuts in 43 ms
+Round 8 finished. Got 7 cuts in 43 ms
+Round 9 finished. Got 8 cuts in 42 ms
+Round 10 finished. Got 8 cuts in 42 ms
+Round 11 finished. Got 8 cuts in 42 ms
+Round 12 finished. Got 10 cuts in 42 ms
+Round 13 finished. Got 7 cuts in 42 ms
+Round 14 finished. Got 10 cuts in 42 ms
+Round 15 finished. Got 10 cuts in 42 ms
+Round 16 finished. Got 10 cuts in 43 ms
+Round 17 finished. Got 8 cuts in 42 ms
+Round 18 finished. Got 8 cuts in 41 ms
+Round 19 finished. Got 9 cuts in 42 ms
+Round 20 finished. Got 9 cuts in 42 ms
+Done for good! After 20 rounds, best cut was: 7
+
+Q:\Repos\UBC-EECE-583-Coursework\Assignment3\Partitioner>Partitioner.exe ..\benchmarks\cm138a.txt 20 0
+Will run for 20 rounds.
+File ..\benchmarks\cm138a.txt opened! Here's what's in it:
+Construction of NetList complete! Summary:
+Nodes: 24
+Nets: 16
+Net Segments: 40
+Round 1 finished. Got 11 cuts in 53 ms
+Round 2 finished. Got 6 cuts in 51 ms
+Round 3 finished. Got 9 cuts in 53 ms
+Round 4 finished. Got 8 cuts in 51 ms
+Round 5 finished. Got 11 cuts in 51 ms
+Round 6 finished. Got 7 cuts in 51 ms
+Round 7 finished. Got 7 cuts in 52 ms
+Round 8 finished. Got 9 cuts in 52 ms
+Round 9 finished. Got 8 cuts in 51 ms
+Round 10 finished. Got 8 cuts in 51 ms
+Round 11 finished. Got 6 cuts in 50 ms
+Round 12 finished. Got 9 cuts in 50 ms
+Round 13 finished. Got 9 cuts in 49 ms
+Round 14 finished. Got 6 cuts in 51 ms
+Round 15 finished. Got 6 cuts in 51 ms
+Round 16 finished. Got 10 cuts in 50 ms
+Round 17 finished. Got 8 cuts in 51 ms
+Round 18 finished. Got 8 cuts in 49 ms
+Round 19 finished. Got 9 cuts in 51 ms
+Round 20 finished. Got 5 cuts in 50 ms
+Done for good! After 20 rounds, best cut was: 5
+
+Q:\Repos\UBC-EECE-583-Coursework\Assignment3\Partitioner>Partitioner.exe ..\benchmarks\cm150a.txt 20 0
+Will run for 20 rounds.
+File ..\benchmarks\cm150a.txt opened! Here's what's in it:
+Construction of NetList complete! Summary:
+Nodes: 36
+Nets: 35
+Net Segments: 55
+Round 1 finished. Got 10 cuts in 91 ms
+Round 2 finished. Got 10 cuts in 88 ms
+Round 3 finished. Got 13 cuts in 90 ms
+Round 4 finished. Got 14 cuts in 91 ms
+Round 5 finished. Got 12 cuts in 89 ms
+Round 6 finished. Got 8 cuts in 90 ms
+Round 7 finished. Got 15 cuts in 91 ms
+Round 8 finished. Got 14 cuts in 91 ms
+Round 9 finished. Got 13 cuts in 90 ms
+Round 10 finished. Got 16 cuts in 89 ms
+Round 11 finished. Got 13 cuts in 91 ms
+Round 12 finished. Got 9 cuts in 90 ms
+Round 13 finished. Got 11 cuts in 90 ms
+Round 14 finished. Got 14 cuts in 92 ms
+Round 15 finished. Got 14 cuts in 90 ms
+Round 16 finished. Got 16 cuts in 92 ms
+Round 17 finished. Got 11 cuts in 90 ms
+Round 18 finished. Got 13 cuts in 91 ms
+Round 19 finished. Got 12 cuts in 91 ms
+Round 20 finished. Got 10 cuts in 90 ms
+Done for good! After 20 rounds, best cut was: 8
+
+Q:\Repos\UBC-EECE-583-Coursework\Assignment3\Partitioner>Partitioner.exe ..\benchmarks\cm162a.txt 20 0
+Will run for 20 rounds.
+File ..\benchmarks\cm162a.txt opened! Here's what's in it:
+Construction of NetList complete! Summary:
+Nodes: 37
+Nets: 32
+Net Segments: 64
+Round 1 finished. Got 17 cuts in 93 ms
+Round 2 finished. Got 14 cuts in 92 ms
+Round 3 finished. Got 17 cuts in 93 ms
+Round 4 finished. Got 15 cuts in 93 ms
+Round 5 finished. Got 15 cuts in 93 ms
+Round 6 finished. Got 16 cuts in 92 ms
+Round 7 finished. Got 17 cuts in 93 ms
+Round 8 finished. Got 13 cuts in 93 ms
+Round 9 finished. Got 16 cuts in 93 ms
+Round 10 finished. Got 14 cuts in 94 ms
+Round 11 finished. Got 14 cuts in 94 ms
+Round 12 finished. Got 15 cuts in 93 ms
+Round 13 finished. Got 16 cuts in 94 ms
+Round 14 finished. Got 12 cuts in 92 ms
+Round 15 finished. Got 18 cuts in 92 ms
+Round 16 finished. Got 12 cuts in 92 ms
+Round 17 finished. Got 12 cuts in 93 ms
+Round 18 finished. Got 14 cuts in 92 ms
+Round 19 finished. Got 16 cuts in 93 ms
+Round 20 finished. Got 16 cuts in 94 ms
+Done for good! After 20 rounds, best cut was: 12
+
+Q:\Repos\UBC-EECE-583-Coursework\Assignment3\Partitioner>Partitioner.exe ..\benchmarks\alu2.txt 20 0
+Will run for 20 rounds.
+File ..\benchmarks\alu2.txt opened! Here's what's in it:
+Construction of NetList complete! Summary:
+Nodes: 213
+Nets: 207
+Net Segments: 703
+Round 1 finished. Got 110 cuts in 2117 ms
+Round 2 finished. Got 112 cuts in 2144 ms
+Round 3 finished. Got 100 cuts in 2105 ms
+Round 4 finished. Got 111 cuts in 2123 ms
+Round 5 finished. Got 103 cuts in 2137 ms
+Round 6 finished. Got 105 cuts in 2140 ms
+Round 7 finished. Got 111 cuts in 2108 ms
+Round 8 finished. Got 107 cuts in 2126 ms
+Round 9 finished. Got 114 cuts in 2102 ms
+Round 10 finished. Got 105 cuts in 2114 ms
+Round 11 finished. Got 115 cuts in 2116 ms
+Round 12 finished. Got 112 cuts in 2126 ms
+Round 13 finished. Got 110 cuts in 2131 ms
+Round 14 finished. Got 101 cuts in 2105 ms
+Round 15 finished. Got 107 cuts in 2101 ms
+Round 16 finished. Got 106 cuts in 2092 ms
+Round 17 finished. Got 109 cuts in 2103 ms
+Round 18 finished. Got 104 cuts in 2106 ms
+Round 19 finished. Got 114 cuts in 2092 ms
+Round 20 finished. Got 100 cuts in 2133 ms
+Done for good! After 20 rounds, best cut was: 100
+
+Q:\Repos\UBC-EECE-583-Coursework\Assignment3\Partitioner>Partitioner.exe ..\benchmarks\C880.txt 20 0
+Will run for 20 rounds.
+File ..\benchmarks\C880.txt opened! Here's what's in it:
+Construction of NetList complete! Summary:
+Nodes: 260
+Nets: 234
+Net Segments: 656
+Round 1 finished. Got 133 cuts in 2657 ms
+Round 2 finished. Got 131 cuts in 2683 ms
+Round 3 finished. Got 131 cuts in 2700 ms
+Round 4 finished. Got 140 cuts in 2679 ms
+Round 5 finished. Got 137 cuts in 2679 ms
+Round 6 finished. Got 132 cuts in 2691 ms
+Round 7 finished. Got 137 cuts in 2732 ms
+Round 8 finished. Got 140 cuts in 2688 ms
+Round 9 finished. Got 133 cuts in 2667 ms
+Round 10 finished. Got 135 cuts in 2677 ms
+Round 11 finished. Got 130 cuts in 2680 ms
+Round 12 finished. Got 134 cuts in 2691 ms
+Round 13 finished. Got 139 cuts in 2655 ms
+Round 14 finished. Got 149 cuts in 2715 ms
+Round 15 finished. Got 135 cuts in 2696 ms
+Round 16 finished. Got 138 cuts in 2641 ms
+Round 17 finished. Got 138 cuts in 2662 ms
+Round 18 finished. Got 128 cuts in 2702 ms
+Round 19 finished. Got 134 cuts in 2683 ms
+Round 20 finished. Got 131 cuts in 2659 ms
+Done for good! After 20 rounds, best cut was: 128
+
+Q:\Repos\UBC-EECE-583-Coursework\Assignment3\Partitioner>Partitioner.exe ..\benchmarks\e64.txt 20 0
+Will run for 20 rounds.
+File ..\benchmarks\e64.txt opened! Here's what's in it:
+Construction of NetList complete! Summary:
+Nodes: 403
+Nets: 338
+Net Segments: 994
+Round 1 finished. Got 211 cuts in 5969 ms
+Round 2 finished. Got 201 cuts in 5931 ms
+Round 3 finished. Got 197 cuts in 6012 ms
+Round 4 finished. Got 204 cuts in 5986 ms
+Round 5 finished. Got 199 cuts in 5937 ms
+Round 6 finished. Got 193 cuts in 5925 ms
+Round 7 finished. Got 208 cuts in 6124 ms
+Round 8 finished. Got 214 cuts in 5905 ms
+Round 9 finished. Got 198 cuts in 5971 ms
+Round 10 finished. Got 192 cuts in 5980 ms
+Round 11 finished. Got 202 cuts in 5986 ms
+Round 12 finished. Got 205 cuts in 6045 ms
+Round 13 finished. Got 185 cuts in 6093 ms
+Round 14 finished. Got 210 cuts in 6225 ms
+Round 15 finished. Got 202 cuts in 5990 ms
+Round 16 finished. Got 203 cuts in 6078 ms
+Round 17 finished. Got 209 cuts in 6249 ms
+Round 18 finished. Got 214 cuts in 6113 ms
+Round 19 finished. Got 203 cuts in 6156 ms
+Round 20 finished. Got 199 cuts in 5950 ms
+Done for good! After 20 rounds, best cut was: 185
+
+Q:\Repos\UBC-EECE-583-Coursework\Assignment3\Partitioner>Partitioner.exe ..\benchmarks\apex1.txt 20 0
+Will run for 20 rounds.
+File ..\benchmarks\apex1.txt opened! Here's what's in it:
+Construction of NetList complete! Summary:
+Nodes: 786
+Nets: 741
+Net Segments: 2522
+Round 1 finished. Got 431 cuts in 25414 ms
+Round 2 finished. Got 448 cuts in 25646 ms
+Round 3 finished. Got 464 cuts in 25614 ms
+Round 4 finished. Got 463 cuts in 25500 ms
+Round 5 finished. Got 449 cuts in 25352 ms
+Round 6 finished. Got 450 cuts in 25407 ms
+Round 7 finished. Got 463 cuts in 25386 ms
+Round 8 finished. Got 456 cuts in 25361 ms
+Round 9 finished. Got 451 cuts in 25425 ms
+Round 10 finished. Got 459 cuts in 25360 ms
+Round 11 finished. Got 453 cuts in 25373 ms
+Round 12 finished. Got 446 cuts in 25441 ms
+Round 13 finished. Got 456 cuts in 25397 ms
+Round 14 finished. Got 453 cuts in 25557 ms
+Round 15 finished. Got 458 cuts in 25553 ms
+Round 16 finished. Got 461 cuts in 25993 ms
+Round 17 finished. Got 454 cuts in 26484 ms
+Round 18 finished. Got 445 cuts in 25996 ms
+Round 19 finished. Got 462 cuts in 26577 ms
+Round 20 finished. Got 463 cuts in 26555 ms
+Done for good! After 20 rounds, best cut was: 431
+
+Q:\Repos\UBC-EECE-583-Coursework\Assignment3\Partitioner>Partitioner.exe ..\benchmarks\cps.txt 20 0
+Will run for 20 rounds.
+File ..\benchmarks\cps.txt opened! Here's what's in it:
+Construction of NetList complete! Summary:
+Nodes: 882
+Nets: 773
+Net Segments: 2757
+Round 1 finished. Got 443 cuts in 31565 ms
+Round 2 finished. Got 449 cuts in 31362 ms
+Round 3 finished. Got 395 cuts in 31163 ms
+Round 4 finished. Got 420 cuts in 31364 ms
+Round 5 finished. Got 410 cuts in 31129 ms
+Round 6 finished. Got 429 cuts in 31439 ms
+Round 7 finished. Got 424 cuts in 31366 ms
+Round 8 finished. Got 434 cuts in 31419 ms
+Round 9 finished. Got 409 cuts in 31581 ms
+Round 10 finished. Got 426 cuts in 31312 ms
+Round 11 finished. Got 439 cuts in 31009 ms
+Round 12 finished. Got 422 cuts in 31506 ms
+Round 13 finished. Got 437 cuts in 31451 ms
+Round 14 finished. Got 412 cuts in 31648 ms
+Round 15 finished. Got 408 cuts in 31548 ms
+Round 16 finished. Got 437 cuts in 31224 ms
+Round 17 finished. Got 429 cuts in 31295 ms
+Round 18 finished. Got 442 cuts in 31046 ms
+Round 19 finished. Got 417 cuts in 31026 ms
+Round 20 finished. Got 437 cuts in 31341 ms
+Done for good! After 20 rounds, best cut was: 395
+
+Q:\Repos\UBC-EECE-583-Coursework\Assignment3\Partitioner>Partitioner.exe ..\benchmarks\paira.txt 20 0
+Will run for 20 rounds.
+File ..\benchmarks\paira.txt opened! Here's what's in it:
+Construction of NetList complete! Summary:
+Nodes: 951
+Nets: 814
+Net Segments: 2399
+Round 1 finished. Got 493 cuts in 32360 ms
+Round 2 finished. Got 498 cuts in 32462 ms
+Round 3 finished. Got 486 cuts in 32531 ms
+Round 4 finished. Got 499 cuts in 32162 ms
+Round 5 finished. Got 500 cuts in 31800 ms
+Round 6 finished. Got 480 cuts in 32054 ms
+Round 7 finished. Got 496 cuts in 31938 ms
+Round 8 finished. Got 471 cuts in 32168 ms
+Round 9 finished. Got 494 cuts in 31417 ms
+Round 10 finished. Got 504 cuts in 31919 ms
+Round 11 finished. Got 484 cuts in 32597 ms
+Round 12 finished. Got 466 cuts in 32553 ms
+Round 13 finished. Got 468 cuts in 32595 ms
+Round 14 finished. Got 510 cuts in 32351 ms
+Round 15 finished. Got 507 cuts in 32314 ms
+Round 16 finished. Got 491 cuts in 31907 ms
+Round 17 finished. Got 490 cuts in 32627 ms
+Round 18 finished. Got 463 cuts in 32294 ms
+Round 19 finished. Got 493 cuts in 32533 ms
+Round 20 finished. Got 502 cuts in 32554 ms
+Done for good! After 20 rounds, best cut was: 463
+
+Q:\Repos\UBC-EECE-583-Coursework\Assignment3\Partitioner>Partitioner.exe ..\benchmarks\apex4.txt 20 0
+Will run for 20 rounds.
+File ..\benchmarks\apex4.txt opened! Here's what's in it:
+Construction of NetList complete! Summary:
+Nodes: 1290
+Nets: 1271
+Net Segments: 4479
+Round 1 finished. Got 726 cuts in 73147 ms
+Round 2 finished. Got 733 cuts in 73609 ms
+Round 3 finished. Got 734 cuts in 72525 ms
+Round 4 finished. Got 733 cuts in 73617 ms
+Round 5 finished. Got 740 cuts in 73634 ms
+Round 6 finished. Got 739 cuts in 71941 ms
+Round 7 finished. Got 750 cuts in 70255 ms
+Round 8 finished. Got 744 cuts in 71247 ms
+Round 9 finished. Got 758 cuts in 69441 ms
+Round 10 finished. Got 744 cuts in 66561 ms
+Round 11 finished. Got 741 cuts in 67363 ms
+Round 12 finished. Got 735 cuts in 67960 ms
+Round 13 finished. Got 747 cuts in 66992 ms
+Round 14 finished. Got 753 cuts in 66571 ms
+Round 15 finished. Got 737 cuts in 67905 ms
+Round 16 finished. Got 762 cuts in 69360 ms
+Round 17 finished. Got 737 cuts in 71121 ms
+Round 18 finished. Got 731 cuts in 68723 ms
+Round 19 finished. Got 733 cuts in 69439 ms
+Round 20 finished. Got 755 cuts in 68406 ms
+Done for good! After 20 rounds, best cut was: 726
+
+Q:\Repos\UBC-EECE-583-Coursework\Assignment3\Partitioner>pause
+Press any key to continue . . .
