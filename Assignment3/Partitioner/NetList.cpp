@@ -9,7 +9,7 @@
 #include "Types.h"
 #include "Constants.h"
 
-#define GAINMOD 1
+#define GAIN_MOD 1
 
 NetList::NetList(parsedInputStruct_t parsedInput)
 {
