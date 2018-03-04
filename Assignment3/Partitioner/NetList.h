@@ -51,6 +51,9 @@ public:
     int getNodeGain(unsigned int id);
     void updateAllNodeGains();
     unsigned int getNumNodes();
+    unsigned int getNumCols();
+    unsigned int getNumRows();
+    unsigned int getNumNets();
 
 private:
     // These function are helpers

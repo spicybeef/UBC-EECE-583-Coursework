@@ -778,6 +778,21 @@ unsigned int NetList::getNumNodes()
     return static_cast<unsigned int>(mNodes.size());
 }
 
+unsigned int NetList::getNumCols()
+{
+    return static_cast<unsigned int>(mNumCols);
+}
+
+unsigned int NetList::getNumRows()
+{
+    return static_cast<unsigned int>(mNumRows);
+}
+
+unsigned int NetList::getNumNets()
+{
+    return static_cast<unsigned int>(mNets.size());
+}
+
 bool NetList::doesSegmentCrossDivider(std::vector<sf::Vector2f> segment)
 {
     float dividerPosition;

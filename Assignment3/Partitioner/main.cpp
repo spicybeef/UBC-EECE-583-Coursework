@@ -138,7 +138,6 @@ int main(int argc, char *argv[])
         return -1;
     }
     input = partitioner->getParsedInput();
-
     // Instantiate the NetList
     netList = new NetList(input);
 
@@ -289,7 +288,52 @@ int main(int argc, char *argv[])
     }
     else if (programMode == PROGRAM_MODE_TEST)
     {
-        std::cout << "RUNNING BUILT IN SELF TEST!" << std::endl; 
+        std::cout << "RUNNING BUILT IN SELF TEST!" << std::endl;
+        std::cout << "Using benchmark C880 for testing..." << std::endl;
+        // Check to make sure the parser made sense of C880
+        if (input.numCols != 20)
+        {
+            std::cout << "FAIL! Parsed incorrect number of columns: " << input.numCols << std::endl;
+            return -1;
+        }
+        if (input.numRows != 15)
+        {
+            std::cout << "FAIL! Parsed incorrect number of row: " << input.numRows << std::endl;
+            return -1;
+        }
+        if (input.numNodes != 260)
+        {
+            std::cout << "FAIL! Parsed incorrect number of nodes: " << input.numNodes << std::endl;
+            return -1;
+        }
+        if (input.numConnections != 234)
+        {
+            std::cout << "FAIL! Parsed incorrect number of nets: " << input.numConnections << std::endl;
+            return -1;
+        }
+        // Check that the netlist made the correct vectors
+        if (netList->getNumCols() != 40)
+        {
+            std::cout << "FAIL! Netlist incorrect number of columns: " << netList->getNumCols() << std::endl;
+            return -1;
+        }
+        if (netList->getNumRows() != 30)
+        {
+            std::cout << "FAIL! Netlist incorrect number of row: " << netList->getNumRows() << std::endl;
+            return -1;
+        }
+        if (netList->getNumNodes() != 260)
+        {
+            std::cout << "FAIL! Netlist incorrect number of nodes: " << netList->getNumNodes() << std::endl;
+            return -1;
+        }
+        if (netList->getNumNets() != 234)
+        {
+            std::cout << "FAIL! Netlist incorrect number of nets: " << netList->getNumNets() << std::endl;
+            return -1;
+        }
+        std::cout << "All test passed!" << std::endl;
+        return 0;
     }
     else
     {
