@@ -108,3 +108,4 @@ ENV/
 *.iobj
 *.obj
 *.tlog
+*.idb

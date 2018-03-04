@@ -5,6 +5,11 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <iterator>
+
+// Boost includes
+#include <boost/program_options.hpp>
+namespace po = boost::program_options;
 
 // SFML Includes
 #include <SFML/Graphics.hpp>
@@ -17,15 +22,20 @@
 #include "Types.h"
 #include "Constants.h"
 
-int main(int argc, char **argv)
+int main(int argc, char *argv[])
 {
     unsigned int i, roundNum, totalRounds, bestCut;
     parsedInputStruct_t input;
     clock_t lastTime;
+    unsigned int drawModeIn, programModeIn;
+    std::string filenameIn;
     drawUpdateMode_e drawMode;
     programMode_e programMode;
+
+    // Constants
     const unsigned int NUMBER_OF_ROUNDS = 1;
     const clock_t PARTITIONER_DELAY_PERIOD_MS = 1000;
+    const double GRAPHICS_DRAW_NODE_PERCENTAGE = 0.2;
 
     // Viewport size
     const sf::Vector2u viewportSize(
@@ -70,51 +80,55 @@ int main(int argc, char **argv)
     // Instantiate the Partitioner
     partitioner = new Partitioner();
 
-    // Filename to read in is the second argument
-    // If no argument is given, load up a default input file
-    if (argc > 1)
+    // Declare the supported options
+    po::options_description desc("Usage");
+    desc.add_options()
+        ("help", "produce help message")
+        ("input-file", po::value<std::string>(&filenameIn)->default_value("..\\benchmarks\\C880.txt"),
+            "the input file")
+        ("program-mode,p", po::value<unsigned int>(&programModeIn)->default_value(static_cast<unsigned int>(PROGRAM_MODE_GUI)),
+            "set the program mode")
+        ("draw-mode,d", po::value<unsigned int>(&drawModeIn)->default_value(static_cast<unsigned int>(DRAW_EVERY_NODE_PERCENT)),
+            "set the draw mode")
+        ("rounds,r", po::value<unsigned int>(&totalRounds)->default_value(NUMBER_OF_ROUNDS),
+            "set the number of rounds");
+    // This makes the input file a positional argument
+    po::positional_options_description p;
+    p.add("input-file", -1);
+    po::variables_map vm;
+    po::store(po::command_line_parser(argc, argv).
+        options(desc).positional(p).run(), vm);
+    po::notify(vm);
+    
+    if (vm.count("help"))
     {
-        partitioner->mFilename = argv[1];
+        std::cout << desc << std::endl;
+        return 1;
     }
-    else
+    if (vm.count("input-file"))
     {
-        //partitioner->mFilename = const_cast<char *>("..\\benchmarks\\test.txt");
-        //partitioner->mFilename = const_cast<char *>("..\\benchmarks\\cm138a.txt");
-        //partitioner->mFilename = const_cast<char *>("..\\benchmarks\\cm151a.txt");
-        //partitioner->mFilename = const_cast<char *>("..\\benchmarks\\apex4.txt");
-        partitioner->mFilename = const_cast<char *>("..\\benchmarks\\C880.txt");
+        std::cout << "Input file: "
+            << vm["input-file"].as<std::string>() << std::endl;
     }
-
-    // Round number is after filename, the third argument
-    if (argc > 2)
+    partitioner->mFilename = filenameIn;
+    if (vm.count("program-mode"))
     {
-        totalRounds = static_cast<unsigned int>(std::stoi(argv[2]));
+        if (programModeIn >= PROGRAM_MODE_NUM)
+        {
+            std::cout << "Invalid program mode: " << programModeIn << std::endl;
+            return -1;
+        }
     }
-    else
+    programMode = static_cast<programMode_e>(programModeIn);
+    if (vm.count("draw-mode"))
     {
-        // Use default
-        totalRounds = NUMBER_OF_ROUNDS;
+        if (programModeIn >= DRAW_MODE_NUM)
+        {
+            std::cout << "Invalid draw mode: " << programModeIn << std::endl;
+            return -1;
+        }
     }
-
-    // Program Mode
-    if (argc > 3)
-    {
-        programMode = static_cast<programMode_e>(std::stoi(argv[3]));
-    }
-    else
-    {
-        programMode = PROGRAM_MODE_GUI;
-    }
-
-    // Draw Mode
-    if (argc > 4)
-    {
-        drawMode = static_cast<drawUpdateMode_e>(std::stoi(argv[4]));
-    }
-    else
-    {
-        drawMode = DRAW_EVERY_NODE_PERCENT;
-    }
+    drawMode = static_cast<drawUpdateMode_e>(drawModeIn);
 
     std::cout << "Will run for " << totalRounds << " rounds." << std::endl;
 
@@ -205,7 +219,7 @@ int main(int argc, char **argv)
                     break;
                     // Partitioner runs for a percentage of the total nodes
                 case DRAW_EVERY_NODE_PERCENT:
-                    for (i = 0; i < netList->getNumNodes()*0.2; i++)
+                    for (i = 0; i < netList->getNumNodes() * GRAPHICS_DRAW_NODE_PERCENTAGE; i++)
                     {
                         partitioner->doPartitioning(*netList);
                     }
@@ -272,6 +286,10 @@ int main(int argc, char **argv)
         // We're done for good.
         std::cout << "Done for good! After " << roundNum << " rounds, best cut was: " << bestCut << std::endl;
         return 0;
+    }
+    else if (programMode == PROGRAM_MODE_TEST)
+    {
+        std::cout << "RUNNING BUILT IN SELF TEST!" << std::endl; 
     }
     else
     {

@@ -12,16 +12,19 @@ typedef struct Node nodeStruct_t;
 // Program mode
 typedef enum
 {
-    PROGRAM_MODE_CLI = 0,
-    PROGRAM_MODE_GUI
+    PROGRAM_MODE_CLI = 0,       /// Program runs in command line only
+    PROGRAM_MODE_GUI,           /// Program runs with full graphics
+    PROGRAM_MODE_TEST,          /// Program runs its built-in self test
+    PROGRAM_MODE_NUM
 } programMode_e;
 
 // Draw update mode enum
 typedef enum
 {
-    DRAW_EVERY_TICK = 0,
-    DRAW_EVERY_NODE_PERCENT,
-    DRAW_EVERY_PERIOD,
+    DRAW_EVERY_TICK = 0,        /// Graphics draw every iteration of the drawing sequence
+    DRAW_EVERY_NODE_PERCENT,    /// Graphics draw after running the partitioning for N iterations where N is a percentage of the total nodes in a benchmark
+    DRAW_EVERY_PERIOD,          /// Graphics draw after a period of time
+    DRAW_MODE_NUM
 } drawUpdateMode_e;
 
 // Partitioning states enum
