@@ -118,6 +118,10 @@ int main(int argc, char *argv[])
             std::cout << "Invalid program mode: " << programModeIn << std::endl;
             return -1;
         }
+        else
+        {
+            std::cout << "Program mode: " << programModeIn << std::endl;
+        }
     }
     programMode = static_cast<programMode_e>(programModeIn);
     if (vm.count("draw-mode"))
@@ -126,6 +130,10 @@ int main(int argc, char *argv[])
         {
             std::cout << "Invalid draw mode: " << programModeIn << std::endl;
             return -1;
+        }
+        else
+        {
+            std::cout << "Draw mode: " << programModeIn << std::endl;
         }
     }
     drawMode = static_cast<drawUpdateMode_e>(drawModeIn);
